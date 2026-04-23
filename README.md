@@ -40,13 +40,13 @@ ls ~/.claude/skills/drawio-sap-diagrams/references/  # layout / elements / guide
 SAP BTP アーキテクチャ図は `drawio-sap-diagrams` スキルで作成する。
 
 出力先:
-- `diagrams/<yyyy-mm-dd>-<nn>/diagram.md` （Mermaid）
-- `diagrams/<yyyy-mm-dd>-<nn>/diagram.drawio` （draw.io XML）
-
-連番は当日既存の max + 1。既存図の修正は元ディレクトリを編集する。
+- `diagrams/diagram.md` （Mermaid）
+- `diagrams/diagram.drawio` （draw.io XML）
 ```
 
-CLAUDE.md に出力先を指定していない場合、スキルはデフォルト（上記と同じパターン）を提案する。
+CLAUDE.md に出力先を指定していない場合、スキルはこのデフォルトを提案する。
+
+複数の図を残したい場合は、`diagrams/<yyyy-mm-dd>-<nn>/` のような日付別サブディレクトリに分けるルールを CLAUDE.md に書く（連番は当日既存の max + 1、既存図の修正は元ディレクトリを編集）。
 
 ## 使い方
 
