@@ -85,12 +85,13 @@ BTP コンテナの中に置く、Subaccount を表す白地の矩形。
 style: rounded=1;whiteSpace=wrap;html=1;strokeColor=#0070F2;fillColor=#ffffff;
        arcSize=32;absoluteArcSize=1;strokeWidth=1.5;
        verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;
-       fontSize=12;fontColor=default;fontFamily=Helvetica;
+       fontSize=12;fontStyle=1;fontColor=default;fontFamily=Helvetica;
 text: Subaccount
 ```
 
 - 角の丸みは BTP コンテナと揃える（arcSize=32）
 - ラベル「Subaccount」はコンテナに埋め込み、左上寄せ
+- フォントは **12px 太字**（`fontStyle=1`）。BTP タイトル（16px 太字 / SAP 青）より一段下のコンテナ階層ラベルであることを示す。同レベルの L1 コンテナ（Global Account 直下の他のコンテナ等）も同じスタイルを使う
 
 ---
 
@@ -264,6 +265,19 @@ SAPIcon=<アイコン名>
 
 - **単独配置**（Subaccount 直下など）: **50×50**
 - **サービスボックス左上の識別アイコン**: **32×32**（後述の「サービスアイコン付きサービスボックス」参照）
+
+### ラベル位置の変種（矢印方向に応じて切り替え）
+
+矢印の入力方向とラベル位置が被ると視認性が落ちる。矢印方向に応じて以下を切り替える:
+
+| 矢印の入力方向 | ラベル位置 | スタイル差分 |
+|---|---|---|
+| 上から下へ入る（下向き矢印）/ 横から入る | **下**（デフォルト） | `verticalLabelPosition=bottom;verticalAlign=top` |
+| 下から上へ入る（上向き矢印） | **上** | `verticalLabelPosition=top;verticalAlign=bottom` |
+
+横方向の矢印は通常アイコン中心に入るため、ラベルは下（デフォルト）で問題ない。**縦方向の矢印はラベルと重なりやすい** ため、矢印が下から入るアイコンはラベルを上に切り替える。
+
+> 設計ルール: [`../SKILL.md` Conventions の「矢印方向とラベル配置」節](../SKILL.md#10-矢印方向とラベル配置の対応)
 
 ### 主な SAPIcon 名
 
