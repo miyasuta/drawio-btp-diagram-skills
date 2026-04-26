@@ -95,38 +95,6 @@ Claude が不足情報を番号付きで聞き返してくるので、番号で�
 
 何を聞き返してくるかは依頼内容と Claude のプロジェクト把握度次第です（上記はあくまで返答スタイルの例）。
 
-### ランドスケープが確定している場合
-
-既に構成が決まっているなら、構造化リストで一気に渡すと往復が減ります:
-
-````markdown
-以下のランドスケープをダイアグラム化してください。
-
-**BTP 内**:
-- Subaccount (BTP 内)
-  - SAP Build Work Zone
-  - SAP Task Center
-- SAP Cloud Identity Services (BTP 内、Subaccount 外)
-
-**BTP 外**:
-- End User (非SAP)
-- Application Clients: Mobile or Desktop (非SAP)
-- 3rd-party Identity Provider (非SAP)
-- SAP On-Premise Solutions (SAP)
-- SAP Cloud Solutions (SAP)
-
-**関係**:
-- End User → Application Clients → Build Work Zone → Task Center → On-Prem / Cloud Solutions
-- Subaccount ↔ Cloud Identity Services (trust)
-- Cloud Identity Services ↔ 3rd-party IdP (delegates auth)
-````
-
-含めると精度が上がる情報:
-
-- 構成要素のリスト（サービス名・役割）
-- 階層・所属関係（何が何の中に入るか）
-- 関係性（データフロー、trust、認証委譲など）
-- SAP / 非SAP の区別（色分けに影響）
 
 ### ワークフローの流れ
 
@@ -138,12 +106,6 @@ Claude が不足情報を番号付きで聞き返してくるので、番号で�
 4. **構造レビュー**（`sap-diagram-review` が自動実行）
 5. draw.io に貼り付けて、スクリーンショットを会話に添付
 6. **ビジュアルレビュー**（`sap-diagram-review` が自動実行）
-
-### よく使う追加指示
-
-- 「アイコンの差し替えはこちらで行うので、それ以外の修正のみ適用してください」— Generic Icon を触らせたくないとき
-- 「コンテナ埋め込みの状態で、文字のスタイルのみ変更してください」— ラベルが別セル化されるのを防ぐ
-- 「この新しいルールを `references/layout.md` に追加してください」— 会話中の合意を永続化する（次節 [スキルの育て方](#スキルの育て方) を参照）
 
 ---
 
@@ -202,10 +164,6 @@ skill リポが symlink されていると、**利用プロジェクト側のセ
 
 設定を書いたら Claude Code を再起動するか、`/hooks` を一度開くと反映されます。
 
-### チームで共有する
-
-1 人で育てたルールをチームに展開するには、`drawio-btp-diagram-skills` リポジトリを GitHub に push するだけです。他のメンバーは同じ clone + symlink 手順で入れ、`git pull` で最新を取り込めます。
-
 ---
 
 ## プロジェクトごとのカスタマイズ
@@ -219,22 +177,6 @@ CLAUDE.md に出力先を指定していない場合、スキルは以下をデ�
 ```
 diagrams/diagram.md       # Mermaid（論理構造）
 diagrams/diagram.drawio   # draw.io XML（貼り付け用）
-```
-
-### 日付別に複数図を残したいとき
-
-CLAUDE.md にこう書きます:
-
-```markdown
-## ダイアグラム作成
-
-SAP BTP アーキテクチャ図は `drawio-sap-diagrams` スキルで作成する。
-
-出力先:
-- `diagrams/<yyyy-mm-dd>-<nn>/diagram.md` （Mermaid）
-- `diagrams/<yyyy-mm-dd>-<nn>/diagram.drawio` （draw.io XML）
-
-連番は当日既存の max + 1。既存図の修正は元ディレクトリを編集する。
 ```
 
 ---
