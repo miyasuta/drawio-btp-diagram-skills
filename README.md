@@ -28,7 +28,6 @@ SAP BTP を題材にアーキテクチャ図を描くとき、draw.io で直接�
 
 - SAP BTP でアプリやソリューションを組み立てているアーキテクト・開発者
 - 公式 SAP ビジュアルガイドラインに沿った図を書きたい人
-- 毎回ゼロから draw.io でアーキ図を組むことに疲れた人
 
 ---
 
@@ -88,22 +87,13 @@ Claude が不足情報を番号付きで聞き返してくるので、番号で�
 - CAP は S/4HANA (Private Cloud) につながっている
 ```
 
-Claude は `package.json` / `mta.yaml` / `xs-app.json` / `package.json > cds` 等を読んでプロジェクト構造を把握し、足りない情報を **番号付きで聞き返します**:
+情報が足りないと Claude は **番号付きで聞き返してきます**。番号で簡潔に返答すれば、合意がとれたところから Mermaid → 棚卸し → draw.io XML の生成に進みます。
 
 ```
-以下を確認させてください:
-1. End User の接続元は Application Clients（ブラウザ）経由でよいですか？
-2. 認証は Cloud Identity Services 経由でしょうか？ 3rd-party IdP 連携はありますか？
-3. S/4HANA への接続は Destination Service + Connectivity Service + Cloud Connector の標準パターンでよいですか？
-4. Work Zone の中に置くアプリは UI5 アプリ 1 つだけですか？ My Inbox 等は含めますか？
-5. Task Center は使いますか？
+1. はい / 2. CIS 経由、3rd-party なし / 3. はい / 4. 不要
 ```
 
-番号で簡潔に返答すれば Mermaid → 棚卸し → draw.io XML の生成に進みます:
-
-```
-1. はい（ブラウザのみ）/ 2. CIS 経由、3rd-party なし / 3. はい / 4. UI5 1 つだけ / 5. 不要
-```
+何を聞き返してくるかは依頼内容と Claude のプロジェクト把握度次第です（上記はあくまで返答スタイルの例）。
 
 ### ランドスケープが確定している場合
 
