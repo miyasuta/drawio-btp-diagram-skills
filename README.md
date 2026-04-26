@@ -20,9 +20,9 @@ SAP BTP を題材にアーキテクチャ図を描くとき、draw.io で直接�
 | スキル | 役割 |
 |---|---|
 | `drawio-sap-diagrams` | 5 ステップ協働ワークフロー（言葉 → Mermaid → XML） |
-| `diagram-review` | 生成された XML / スクリーンショットの自動レビュー |
+| `sap-diagram-review` | 生成された XML / スクリーンショットの自動レビュー |
 
-`diagram-review` は独立トリガー（XML 生成完了 / スクショ共有）を持つため、他のワークフローからも単独で呼び出せます。
+`sap-diagram-review` は独立トリガー（XML 生成完了 / スクショ共有）を持つため、他のワークフローからも単独で呼び出せます。
 
 ### 対象ユーザー
 
@@ -44,7 +44,7 @@ SAP BTP を題材にアーキテクチャ図を描くとき、draw.io で直接�
 ```bash
 git clone https://github.com/<user>/drawio-btp-diagram-skills.git ~/projects/claude-drawio-skill/drawio-btp-diagram-skills
 ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/drawio-sap-diagrams ~/.claude/skills/drawio-sap-diagrams
-ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/diagram-review     ~/.claude/skills/diagram-review
+ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/sap-diagram-review     ~/.claude/skills/sap-diagram-review
 ```
 
 symlink にしておくと `git pull` の結果が即反映されます（`cp -r` は更新漏れの原因になるため非推奨）。
@@ -58,7 +58,7 @@ ls ~/.claude/skills/drawio-sap-diagrams/references/ # layout / elements / guidel
 
 ### 2. Claude Code を再起動
 
-セッション開始時のスキル一覧に `drawio-sap-diagrams` と `diagram-review` が並んでいれば準備完了。
+セッション開始時のスキル一覧に `drawio-sap-diagrams` と `sap-diagram-review` が並んでいれば準備完了。
 
 ### 3. 最初の 1 図を描く
 
@@ -145,9 +145,9 @@ Claude は `package.json` / `mta.yaml` / `xs-app.json` / `package.json > cds` �
 1. **Mermaid 生成** → `diagram.md` に論理構造を出力。Mermaid プレビューで確認し、違えば言葉で修正指示
 2. **要素棚卸し**（座標なしのセル一覧をテキストで提示）→ 構造ミスがあればここで修正
 3. **draw.io XML 生成** → `diagram.drawio`
-4. **構造レビュー**（`diagram-review` が自動実行）
+4. **構造レビュー**（`sap-diagram-review` が自動実行）
 5. draw.io に貼り付けて、スクリーンショットを会話に添付
-6. **ビジュアルレビュー**（`diagram-review` が自動実行）
+6. **ビジュアルレビュー**（`sap-diagram-review` が自動実行）
 
 ### よく使う追加指示
 
@@ -263,7 +263,7 @@ drawio-btp-diagram-skills/
     │       ├── layout.md     # draw.io 実装詳細（px サイズ・座標・エッジ接続点）
     │       ├── elements.md   # draw.io 要素スタイル定義（BTP, ロゴ, アイコン, 線）
     │       └── guidelines.md # SAP 公式ガイドライン日本語要約（source of truth）
-    └── diagram-review/
+    └── sap-diagram-review/
         └── SKILL.md          # 構造レビュー + ビジュアルレビューの 2 フェーズ
 ```
 

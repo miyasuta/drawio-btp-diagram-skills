@@ -1,9 +1,9 @@
 ---
-name: diagram-review
-description: Use after generating diagram.drawio (Step 4) to review the XML against project rules and style docs
+name: sap-diagram-review
+description: Use after generating or editing a draw.io diagram of SAP BTP architecture, or when the user shares a diagram screenshot — checks XML structure (Phase 1) and rendered visuals (Phase 2) against SAP visual conventions and the drawio-sap-diagrams skill's references.
 ---
 
-# Diagram Review
+# SAP Diagram Review
 
 ## Overview
 
@@ -17,6 +17,19 @@ draw.io XML のレビューを **2 フェーズ** で行う。
 - **Step 4.5**: XML 生成完了直後に自動実行する
 - **Step 5.5**: 人間がスクリーンショットを提供したときに自動実行する
 - 人間が明示的に「レビューして」と言った場合にも実行可能
+
+### 再実行が必要なケース（MUST）
+
+既存の `diagram.drawio` に対して以下の変更を加えた後は、**構造レビュー（Phase 1）を必ず再実行する**:
+
+- 要素の**追加・削除**（アイコン、ボックス、エッジ等）
+- 要素の**移動**（コンテナを跨ぐ、または位置関係が大きく変わる — 例: 上 → 下）
+- コンテナの**サイズ変更**（幅・高さ）
+- 主フローの**中心軸**（Y または X）の変更
+
+**理由**: 要素の位置やサイズが変わると、コンテナの余白・同レベルボックスのサイズ統一・座標整合などの検算結果が連動して変わる。差分が小さく見えても、関連する余白計算が全体で崩れる可能性があるため、全カテゴリを通した再評価が必要。
+
+**過去の失敗例**: HTML5 App Repo / XSUAA をコンテナ上段から下段へ移動した際、主フローの Y 座標はそのまま据え置いたため、Subaccount 内の上部に 100 px 超の空白が発生した。このとき再レビューを走らせていれば、`layout.md §2`「無駄な余白を作らない」「縦横両方向で、不要な余白がないか確認」のチェックで即座に検出できた。
 
 ---
 
@@ -43,6 +56,7 @@ draw.io XML のレビューを **2 フェーズ** で行う。
 | ラベル・言語 | `drawio-sap-diagrams` Conventions | 要素名が英語か、矢印ラベルが許可リスト内か |
 | コンテナの塗り | `../drawio-sap-diagrams/references/elements.md` | L0-L3 の交互ルール（#EBF8FF / #ffffff）に従っているか |
 | アイコン形式 | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | SAP アイコンのサイズ・`html=1;`の有無、Generic Icon がプレースホルダ形式か（既知アスペクト比の適用含む）、ラベルが別セルか |
+| ラベル改行 | `../drawio-sap-diagrams/references/elements.md` | 3 単語以上のラベルが改行されているか（SAP サービスアイコン: `&#10;` / サービスボックスのタイトル: `<br>`）。未改行だと水平間隔が無駄に広がる |
 | コンテナサイズ | `../drawio-sap-diagrams/references/layout.md` | ラベル付きコンテナの上部余白（テキストラベル: 50〜60px）、SAP アイコンのラベルはみ出し分を含めた下部・側面余白、子要素が 1 つの場合の中心揃え、同レベルのボックスのサイズ統一（横並びなら高さ、縦並びなら幅） |
 | タイトルはみ出し | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | サービスボックスのタイトルテキストセル幅がタイトル文字列に対して十分か（fontSize=12 の太字で 1 文字あたり約 8px を目安に推定） |
 | 座標整合 | `../drawio-sap-diagrams/references/layout.md` | 直線矢印で結ぶ要素の中心座標が一致しているか |

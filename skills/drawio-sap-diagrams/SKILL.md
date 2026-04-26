@@ -1,6 +1,6 @@
 ---
 name: drawio-sap-diagrams
-description: Use when designing SAP BTP architecture diagrams with draw.io — guides a 5-step human/Claude collaboration (verbal design → Mermaid → draw.io XML) following SAP official visual guidelines
+description: Use when creating, modifying, or refining SAP BTP architecture diagrams in draw.io / drawio format. Triggers on requests like "describe this landscape", "draw a BTP architecture", "make a draw.io of <SAP services>", or any task producing diagram.drawio / .drawio files for SAP cloud solutions.
 ---
 
 # drawio-sap-diagrams
@@ -29,14 +29,19 @@ Claude と協働して SAP BTP アーキテクチャ図を draw.io で作成す�
       ↓
 4a. Claude: 要素棚卸しパス — セル一覧（ID/サイズ/親子/エッジ）をテキストで作成
       ↓
-4b. Claude: 座標計算パス — 棚卸しに基づき座標を計算し diagram.drawio に XML を出力
+4b-1. Claude: 論理座標パス — 主軸変数（main_axis_Y / GAP 等）と相対式で各要素位置を定義
       ↓
-4.5 Claude: diagram-review（構造レビュー）— XML ベースで自動チェック
+4b-2. Claude: 物理座標パス — 主軸の値を 1 箇所で確定し、式を評価して XML に書き出す
       ↓
+4.5 Claude: sap-diagram-review（構造レビュー）— XML ベースで自動チェック
+      ↑↓ 修正発生時はここを往復
 5. 人間: XML を draw.io に手動で貼り付け
       ↓
-5.5 Claude: diagram-review（ビジュアルレビュー）— スクリーンショットで見た目チェック
+5.5 Claude: sap-diagram-review（ビジュアルレビュー）— スクリーンショットで見た目チェック
+      ↑↓ 修正発生時は 4b-1 / 4b-2 まで戻り、再度 4.5 → 5 → 5.5 を回す
 ```
+
+**修正ループのルール**: ステップ5 / 5.5 で問題が見つかったら、勝手に Edit せずに **必ず 4b-1（論理座標パス）まで戻る**。何が変わるか（主軸変数 / 相対式）を先に整理してから 4b-2 で値を再計算し、Step 4.5 を再実行する。これにより部分修正で全体整合が崩れる事故を防ぐ。
 
 ---
 
@@ -191,57 +196,48 @@ SAP サービスアイコン（`mxgraph.sap.icon`）のラベルはデフォル�
 
 > draw.io での実装詳細（ラベル位置変種のスタイル差分）は `references/elements.md` の「ラベル位置の変種」セクションを参照。
 
+### 11. サービス名の慣例的な短縮
+
+ダイアグラムのラベルには、公式フルネームではなく **慣例的に使われる短縮形** を優先する。長いフルネームをそのまま入れると水平方向が無駄に広がるため、改行（`elements.md` のラベル改行ルール）の前にまず「短くできないか」を検討する。
+
+既知の短縮形:
+
+| 公式名 | ダイアグラム上のラベル |
+|---|---|
+| SAP Destination service | `Destination` |
+
+**一般原則**:
+- 識別に不要な `service` / `Services` サフィックスは省略してよい（ただし `SAP Cloud Identity Services` のようにブランドの一部となっているものは残す）
+- 文脈で曖昧さが生じない場合は `SAP` プレフィックスも省略可（ただし `SAP HANA` のように他と区別する必要がある場合は残す）
+- 迷ったら残す側（正式名）を選び、水平方向を圧迫するときに短縮を検討する
+
+新しい短縮形を採用した場合は、本テーブルに追記する。
+
 ---
 
-## Step 4: draw.io XML 生成（2 パス構成）
+## Step 4: draw.io XML 生成（3 パス構成）
 
-ステップ4 では `references/layout.md` + `references/elements.md`（判断に迷ったら `references/guidelines.md`）を読んでから着手する。Conventions はステップ2-3 で既に適用済みのため、ここでは draw.io 固有の実装（px サイズ・座標・エッジ接続点・スタイル値）に集中する。
+> **必須**: 4a に入る前に、`references/layout.md`、`references/elements.md`、`references/coordinate-passes.md` を **必ず Read する**。記憶 / 推測で書くと、過去の iteration で更新されたサイズ・座標規則・SAPIcon 名が反映されない。判断に迷ったら `references/guidelines.md` も参照。
 
-**なぜ 2 パスに分けるか**: 座標とセル構造を同時に書くと、後からサイズ変更した際に連鎖的に座標計算をやり直すことになり時間がかかる。先にセルの棚卸し（ID・サイズ・親子・エッジ）だけを確定させ、構造を固めてから機械的に座標を計算する方が速い。4a の時点で構造ミスを発見できれば、XML を書き直さず済む。
+Conventions はステップ2-3 で既に適用済み。ここでは draw.io 固有の実装（px サイズ・座標・エッジ接続点・スタイル値）に集中する。
+
+### 3 パス概要
+
+| パス | 役割 | 書くもの |
+|---|---|---|
+| **4a 棚卸し** | 構造ミスの早期発見 | 座標なしのセル一覧（ID / 種別 / 親子 / エッジ） |
+| **4b-1 論理座標** | 修正に強い位置定義 | 主軸変数 + 相対式（`BWZ.x = SUB_LEFT + 35` 等） |
+| **4b-2 物理座標** | px 値を確定して XML 出力 | 変数評価結果 + `<mxCell>` |
+
+各パスの手順・主軸変数の典型例・式の書き方・修正ループのルールは [`references/coordinate-passes.md`](references/coordinate-passes.md) に集約。Step 4 を実行する前に必ず読む。
 
 ### Step 4 事前準備（スタイル未定義の洗い出し）
 
-両パスに入る前に、以下を一度だけ済ませる。
+3 パスに入る前に、以下を一度だけ済ませる。
 
 1. **必要要素の棚卸し**: その図で使うサービスアイコン名・ボックス種別・新規のレイアウトパターンを列挙する
 2. **references に存在するか確認**: `references/elements.md` の SAPIcon 表、`references/layout.md` の標準サイズ表、`references/guidelines.md` を突き合わせる
 3. **不明点を一括でユーザーに確認**: 不明な SAPIcon 名や未定義パターンを **全部まとめて** 聞く（遭遇するたびに聞くと会話が細切れになる）
-
-### Step 4a: 要素棚卸しパス（座標を書かない）
-
-XML を書き始める前に、**座標なし** で全セルをテキストで棚卸しする。サイズは `references/layout.md` の標準値を引用するだけ（この時点で計算はしない）。
-
-棚卸し項目（箇条書きで出力）:
-
-- **コンテナ・ボックス**: ID / 種別（BTP, Subaccount, サービスボックス等）/ サイズ（標準値）/ 親コンテナ
-- **アイコン・ラベル**: ID / 種別（SAPIcon 名 / Generic Icon プレースホルダ）/ 親コンテナ / ラベル文字列
-- **エッジ**: ID / source → target / スタイル種別（直線 / orthogonal / trust / authenticate 等）
-
-この時点でユーザーに共有してもよい。構造ミス（親子関係の誤り、エッジの欠落、ボックス種別の選択ミス）はここで気付けば修正コストが小さい。
-
-### Step 4b: 座標計算パス
-
-4a の棚卸しを入力として、機械的に座標を決めて XML を生成する。計算順序:
-
-1. **メインフロー軸の決定**: 横並びなら中心 Y、縦並びなら中心 X を 1 つ固定する
-2. **コンテナ境界の計算**: 親コンテナのサイズから子要素の配置領域を算出
-3. **分岐（trust / authenticate 等）の配置**: メインフローから外れるサービスの位置を決める
-4. **エッジの接続点**: 直線で結ぶエッジは両端のセル中心座標が一致するよう揃える（`references/layout.md` §4）
-
-### 座標の粒度
-
-Claude が XML を書く際、座標は粗く決めて良い。**最終的な位置微調整は人間が draw.io 上で行う**。Claude が厳密に合わせるべきなのは以下だけ:
-
-- **直線矢印で結ぶ要素の中心座標**（中心が 1 px でもずれると orthogonal に折れ曲がる、`references/layout.md` §4 参照）
-- **コンテナの内外関係**（BTP の中 / Subaccount の中 / ボックスの中、の所属）
-
-それ以外（コンテナの幅・高さ、余白、矢印のベンド点など）はおおよそで良い。ピクセル単位の計算に時間をかけるより、粗い XML を早く出してユーザーのフィードバックを受ける方が速い。
-
-### スタイルの source of truth
-
-- **`references/guidelines.md` = SAP 公式ガイドラインの日本語要約 = source of truth**
-- **`references/layout.md` / `references/elements.md` = guidelines を draw.io XML として具体化した実装層**
-- 実装層と公式が食い違う場合は、原則として実装層を公式に合わせて修正する。Claude は食い違いを見つけても勝手に直さず、**ユーザーに報告してから対応** する（過去の iteration で意図的にずらしている可能性があるため）。
 
 ---
 
@@ -284,7 +280,7 @@ Claude が XML を書く際、座標は粗く決めて良い。**最終的な位
 
 ## Step 4.5: 構造レビュー（自動実行）
 
-ステップ4 で `diagram.drawio` を生成した直後、Claude は **diagram-review スキル（Phase 1: 構造レビュー）** を自動実行する。Conventions と `references/` の現在のルールに照らして XML をチェックし、問題があれば報告する。問題がなければ「レビュー OK」と表示してステップ5 に進む。
+ステップ4 で `diagram.drawio` を生成した直後、Claude は **sap-diagram-review スキル（Phase 1: 構造レビュー）** を自動実行する。Conventions と `references/` の現在のルールに照らして XML をチェックし、問題があれば報告する。問題がなければ「レビュー OK」と表示してステップ5 に進む。
 
 ## Step 5: draw.io に貼り付け + スクリーンショット共有
 
@@ -292,7 +288,7 @@ Claude が XML を書く際、座標は粗く決めて良い。**最終的な位
 
 ## Step 5.5: ビジュアルレビュー（自動実行）
 
-人間が共有したスクリーンショットを元に、Claude は **diagram-review スキル（Phase 2: ビジュアルレビュー）** を実行する。ラベルのはみ出し・重なり、コンテナ余白、矢印の直線性などを画像から確認し、問題があれば修正案とともに報告する。問題がなければ「ビジュアルレビュー OK」と表示する。
+人間が共有したスクリーンショットを元に、Claude は **sap-diagram-review スキル（Phase 2: ビジュアルレビュー）** を実行する。ラベルのはみ出し・重なり、コンテナ余白、矢印の直線性などを画像から確認し、問題があれば修正案とともに報告する。問題がなければ「ビジュアルレビュー OK」と表示する。
 
 問題があれば言葉で修正指示に戻る。
 
