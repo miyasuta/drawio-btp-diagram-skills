@@ -108,7 +108,7 @@ Claude は Mermaid を書く前に、後述の **Conventions** 節を必ず確�
 - **縦並びの例**: 上から下に流れるシーケンスは同じ列に揃える
 - **L字進入を作らない**: 横から来た線をターゲット手前で曲げて下辺/上辺に刺す（「横から来て下から入る」）のは禁止。接続元の位置を調整し、相手の対向辺へ直線で刺す。揃えられない複数入力は同じ辺の異なる位置に複数の直線で刺す
 
-> draw.io での実装詳細（直線 vs orthogonal の使い分け、L字進入の禁止、中心座標の px 揃え）は `references/layout.md`（§1 / §1a / §4）を参照。
+> draw.io での実装詳細（直線 vs orthogonal の使い分け、L字進入の禁止、中心座標の px 揃え）は `references/layout.md`（§1a / §1b / §4）を参照。
 
 ### 4. End User → Application Clients は常にセットで配置する
 
