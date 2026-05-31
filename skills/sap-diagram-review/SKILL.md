@@ -59,6 +59,7 @@ draw.io XML のレビューを **2 フェーズ** で行う。
 | ラベル改行 | `../drawio-sap-diagrams/references/elements.md` | 3 単語以上のラベルが改行されているか（SAP サービスアイコン: `&#10;` / サービスボックスのタイトル: `<br>`）。未改行だと水平間隔が無駄に広がる |
 | ラベル位置 | `../drawio-sap-diagrams/references/elements.md`（ラベル位置の変種）+ `SKILL.md §10` | SAP サービスアイコンのラベルが**デフォルトの下**（`verticalLabelPosition=bottom`）で統一されているか。`top` に切り替えたアイコンがあれば、それが §10 の例外条件（下辺進入を避けられない等）を**本当に満たすか**を検証する。満たさない／代替手段（下ラベルのまま矢印をラベル下から出す・接続元を動かす等）がある場合は **🚩問題として報告**し、「意図的な逸脱（修正不要）」で素通りさせない。図内でラベル位置が上下混在していたら原則フラグ |
 | エッジ進入 | `../drawio-sap-diagrams/references/layout.md` §1a | ボックスへの「L字進入」（横から来て下辺/上辺に刺す等、対向しない辺への直角進入）が無いか。あれば直線化（接続元の位置調整・同じ辺の異なる位置への複数直線）を提案する |
+| Line jump | `../drawio-sap-diagrams/references/elements.md`（線/エッジ） | 全エッジのスタイルに `jumpStyle=gap;jumpSize=8;`（交差部の隙間）が入っているか。抜けているエッジがあれば追加を提案する |
 | コンテナサイズ | `../drawio-sap-diagrams/references/layout.md` | ラベル付きコンテナの上部余白（テキストラベル: 50〜60px）、SAP アイコンのラベルはみ出し分を含めた下部・側面余白、子要素が 1 つの場合の中心揃え、同レベルのボックスのサイズ統一（横並びなら高さ、縦並びなら幅） |
 | タイトルはみ出し | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | サービスボックスのタイトルテキストセル幅がタイトル文字列に対して十分か（fontSize=12 の太字で 1 文字あたり約 8px を目安に推定） |
 | 座標整合 | `../drawio-sap-diagrams/references/layout.md` | 直線矢印で結ぶ要素の中心座標が一致しているか |

@@ -206,12 +206,14 @@ style: text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosiz
 
 コンポーネント同士をつなぐ線。接続点の指定方法や直線/折れ曲がりの使い分けは [`layout.md`](layout.md) を参照。
 
+> **Line jump（交差部の隙間）は全エッジにデフォルトで付ける**: エッジ同士が交差する箇所で「またぎ（隙間）」を表示するため、**すべての線スタイルに `jumpStyle=gap;jumpSize=8;` を含める**。交差が避けられないケース（例: 左の入口→中央サービス の線が、中央サービス→下の外部 API の線と交わる）でも、上を通る線に隙間が入って読みやすくなる。交差が無い線に付けても無害なので、最初から全エッジに入れておく。`jumpStyle` は `gap`（隙間）を標準とする（`arc`/`sharp` も可だが図全体で統一する）。
+
 ### 直線
 
 一直線に並ぶコンポーネントに使用。
 
 ```
-style: endArrow=blockThin;html=1;strokeColor=#475e75;bendable=1;rounded=0;endFill=1;endSize=4;strokeWidth=1.5;startSize=4;startArrow=none;startFill=0;
+style: endArrow=blockThin;html=1;strokeColor=#475e75;bendable=1;rounded=0;endFill=1;endSize=4;strokeWidth=1.5;startSize=4;startArrow=none;startFill=0;jumpStyle=gap;jumpSize=8;
 ```
 
 ### 折れ曲がった直線（orthogonal）
@@ -219,7 +221,7 @@ style: endArrow=blockThin;html=1;strokeColor=#475e75;bendable=1;rounded=0;endFil
 一直線ではないコンポーネントに使用。
 
 ```
-style: edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;fontFamily=Helvetica;fontColor=default;targetPerimeterSpacing=15;endSize=4;startSize=4;endArrow=blockThin;endFill=1;strokeWidth=1.5;startArrow=none;startFill=0;
+style: edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475E75;fontFamily=Helvetica;fontColor=default;targetPerimeterSpacing=15;endSize=4;startSize=4;endArrow=blockThin;endFill=1;strokeWidth=1.5;startArrow=none;startFill=0;jumpStyle=gap;jumpSize=8;
 ```
 
 ### 双方向矢印（trust / delegates auth）
