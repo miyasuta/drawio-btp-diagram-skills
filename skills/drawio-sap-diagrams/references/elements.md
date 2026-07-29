@@ -325,6 +325,7 @@ SAPIcon=<アイコン名>
 | Cloud Connector | `Cloud_Connector2` |
 | SAP Connectivity Service | `SAP_Connectivity_Service` |
 | HTML5 Application Repository service | `HTML5_App_Repository` |
+| SAP Custom Domain service | `SAP_Custom_Domain_service` |
 
 他のサービスのアイコン名は draw.io のシェイプライブラリから確認できる。
 

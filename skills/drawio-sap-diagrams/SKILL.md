@@ -232,6 +232,18 @@ BTP コンテナの **上辺より上には原則として要素を置かない*
 - **配置の目安**: 外部の入口系は左（§12）、BTP 内サービスが従属的に呼び出す外部 API（LLM など）は下に置くと、BTP からの矢印が下向き（ボックス型サービスの下辺から）で素直に出せる
 - **例外**: どうしても上に置く場合は、BTP 内側の接続元をボックス型サービス（下ラベルを持たないもの）にして上向き矢印がラベルを貫かないようにする
 
+### 14. コンテナ帰属（BTP 内 / Subaccount 内 / 外）は Mermaid 段階で確定する
+
+各要素が **どのコンテナに属するか**（① BTP の外 / ② BTP 内・Subaccount 外 / ③ Subaccount 内）を、**Mermaid（論理構造）の段階で確定させる**。draw.io の座標を書き始めてから「やっぱり中だった」と気付くと、コンテナ幅・余白・主軸位置の再計算が芋づる式に発生する。
+
+- **Mermaid でネストした subgraph で帰属を明示する**（`subgraph BTP` の中に `subgraph SUB["Subaccount"]` を置き、各ノードを正しい階層に入れる）。帰属が曖昧なノードは、Mermaid レビュー時にユーザーへ確認する
+- **サービスの帰属はプロビジョニング単位で決める**。「リクエスト経路のどこに現れるか」ではなく「どのスコープでエンタイトル／設定するサービスか」で判断する
+  - 例: **SAP Custom Domain サービスはサブアカウント単位**で設定するため、リクエスト経路上は Approuter の手前でも、図では **Subaccount 内** に置く（BTP 直下・Subaccount 外に置くのは誤り）
+  - 例: XSUAA・Destination・HTML5 App Repo・API Management（Integration Suite）等もサブアカウントのサービス → Subaccount 内
+- **判断に迷う要素は Mermaid 段階で棚卸しし、帰属を1つずつ確定してから 4a へ進む**
+
+> 失敗例（2026 external-ui）: Custom Domain を当初 BTP 直下（Subaccount 外）に置いたが、実際はサブアカウントのサービスだった。Subaccount 内へ移す修正で主フローの X 座標・Subaccount 幅・BTP 左右余白まで再計算が発生した。Mermaid 段階で帰属を確定していれば一度で済んだ。
+
 ---
 
 ## Step 4: draw.io XML 生成（3 パス構成）
