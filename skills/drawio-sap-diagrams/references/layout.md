@@ -1,228 +1,228 @@
-# レイアウトガイド
+# Layout Guide
 
-draw.io XML を生成するときの**実装レベルの詳細**（px サイズ・座標計算・エッジ接続点・余白）を定義する。**Claude はステップ4（draw.io XML 生成）の際にこのファイルを読む**。
+Defines the **implementation-level details** for generating draw.io XML (px sizes, coordinate calculations, edge connection points, margins). **Claude reads this file during Step 4 (draw.io XML generation).**
 
-論理的な配置ルール（何をどこに置くか、どう組み合わせるか）は [`../rules/conventions.md`](../rules/conventions.md) を参照。個別要素のスタイル定義（BTP コンテナ、アイコンなど）は [`elements.md`](elements.md) を参照。
+For logical placement rules (what goes where, how things combine), see [`../rules/conventions.md`](../rules/conventions.md). For individual element style definitions (BTP container, icons, etc.), see [`elements.md`](elements.md).
 
-このファイルは SAP 公式ガイドラインを draw.io で具体化した実装層。source of truth は [`../GUIDELINES.md`](../GUIDELINES.md)。公式と食い違いを見つけたら `styles/` 側を公式に合わせる（変更前にユーザーに確認）。
-
----
-
-## 1. エッジ（矢印）のルーティングとラベル
-
-エッジの形状（直線 / 折れ）、ボックスへの進入方向、コンテナ境界の跨ぎ方、ラベルの配置をまとめる。中心座標の揃え方は [`§4`](#4-接続要素の軸揃え直線矢印を成立させる) と併せて使う。
-
-### 1a. 直線 vs orthogonal の使い分け
-
-> 論理原則「データフローは一直線に並べる」→ [`../rules/conventions.md` §3](../rules/conventions.md#3-データフローは一直線に並べる)
-
-一直線に並んだ要素間の接続は**直線（まっすぐな矢印）**で描く。曲がる必要がないのに orthogonal を使うと不自然なベンドが入るため避ける。一直線に並ばない要素間のみ **orthogonal（折れ曲がった直線）** を使う。
-
-### 1b. ボックスへの「L字進入」を禁止する（直線を優先）
-
-接続元から横（または縦）に伸ばしたあと直角に曲げて、ターゲットボックスの **対向しない辺**（横から来たのに下辺・上辺、縦から来たのに左右辺）へ刺す **L 字の矢印は作らない**。「orthogonal が許されるのは一直線に並ばない要素間のみ」という原則を、安易な L 字進入の言い訳にしないこと。**まず接続元の位置を調整して直線で結べないかを検討する**。
-
-- ❌ 悪い例: 左にある要素から右へ伸ばし、ターゲット手前で上に曲げてボックス**下辺**に刺す（「横から来て下から入る」線）
-- ✅ 良い例: 接続元の中心 Y をターゲット左辺上の一点に合わせ、**左辺へ水平直線**で刺す（[§4 軸揃え](#4-接続要素の軸揃え直線矢印を成立させる)で中心座標を一致させる）
-- 一直線に揃えられない複数の入力がターゲットにある場合は、**同じ辺の異なる高さ/位置**に複数の直線で刺す（各線をそれぞれ直線に保つ）。ターゲットがアイコンではなく**ボックス**なら、`entryY` を変えるだけで複数の水平直線を同一の辺に揃えられる
-- orthogonal が本当に必要なのは、接続元・接続先のどちらも動かせず、かつ対向辺で揃えられない場合に限る（例: 共通の根から複数ターゲットへ分岐する §6a のケース）
-
-> ねらい: 矢印の進入方向と発射方向を「対向する辺の中心どうし」に保つことで、読み手が線をたどりやすくなる。L 字進入は「どの辺から入るのか」が曖昧になり、特に下辺進入は §10（上向き矢印）のラベル貫通問題も誘発する。
-
-### 1c. コンテナ境界を跨ぐエッジは、折れ点とラベルを枠の外のクリア帯に置く
-
-コンテナ内の要素から**外の要素**へ向かうエッジ（例: BTP 内サービス → BTP 外の OpenAI）は、コンテナの枠線を横切る。このとき:
-
-- **枠線は垂直/水平に直角で 1 回だけ跨ぐ**。線が枠線と斜めに交わったり、枠線に沿って長く重なったりしないようにする
-- **エッジの折れ点（水平ジョグ）とラベルを、枠線の真上に置かない**。折れ点やラベルが枠線（Subaccount / BTP の border）に重なると、線も文字も読めなくなる。折れ点は **枠の外側のクリアな帯**（コンテナ下辺より下の空き領域など）へ落とす
-- そのために、**コンテナと外部ターゲットの間に十分なクリア帯（目安 60〜80px）を確保**し、`<Array as="points">` で経由点を打って水平ジョグをその帯の中（枠線から 15px 以上離す）に置く
-- 複数のエッジが同じ帯を通る場合（例: 2 本が BTP 下から OpenAI へ）、各ラベルの Y / X をずらして重ならないようにする
-
-> 失敗例（2026 CAP-RAG）: BTP 内 CI → BTP 外 OpenAI のエッジで、orthogonal の自動ジョグがちょうど Subaccount 下辺に乗り、`create embedding` ラベルと水平線が枠線に重なって読めなくなった。外部ターゲット（OpenAI）を 45px 下げてクリア帯を広げ、経由点で水平ジョグを枠外（枠線の 40px 下）へ落として解消。
-
-> 関連: 公式 Foundation の Spacing ルール「オブジェクト間は均等に、SAPロゴの高さ程度」 → [`../GUIDELINES.md` の Spacing セクション](../GUIDELINES.md#スペーシングspacing)
-
-### 1d. エッジラベルは折れ点を避け、直線区間で線中央に乗せる。並走ラベルは高さを揃える
-
-折れ点（コーナー）を持つエッジのラベルは、**折れ点の上に置かない**（線の形状が隠れて経路が読めなくなる）。また、線から離して浮かせると**どの線のラベルか分からなくなる**。両方を避けるための置き方:
-
-- **直線区間（水平 or 垂直のまっすぐな部分）にラベルを置く**。折れ点は外す
-- **ラベル中央を線に乗せる**（`<mxPoint as="offset">` を `x=0;y=0` にする）。線がラベル中央を通ることで「この線のラベル」だと一目で分かる。離して浮かせない
-- 位置は **`mxGeometry` の `relative="1"` + `x`（−1=source 〜 +1=target、0=中点）** で経路上のアンカーを指定する。特定の Y / X に乗せたいときは、経路長に対する比率から `x` を逆算する（`x = 2 × (source からの距離 / 全経路長) − 1`）
-- **並走・関連する複数のエッジラベルは Y（高さ）を揃える**。各エッジの中点 Y（直線なら `(source.y + target.y)/2`）を一致させるか、`relative` の `x` で同一 Y に合わせると、図全体の可読性が上がる
-
-> 実例（2026 CAP-RAG）: `create embedding`（折れ線）と `query embedding + answer`（直線）の 2 ラベルを、ともに各エッジの垂直区間の中央（線が文字中央を通る）に乗せ、Y=412.5 に揃えた。`create embedding` は経路長 300 のうち source から 112.5 の位置（Y=412.5）にしたいので `x = 2×(112.5/300) − 1 = −0.25`。
+This file is the implementation layer that realizes the official SAP guidelines in draw.io. The source of truth is [`../GUIDELINES.md`](../GUIDELINES.md). If you find a discrepancy with the official guidelines, bring the `styles/` side in line with them (confirm with the user before changing anything).
 
 ---
 
-## 2. コンテナのサイズと余白（無駄な余白を作らない・子要素の揃え方）
+## 1. Edge (Arrow) Routing and Labels
 
-Subaccount や BTP コンテナのサイズは、内部要素を配置したうえで**実際に必要な大きさに詰める**。アイコン + ラベルだけのサービスは意外に小さいので、旧サイズのまま大きな箱を残すと余白が目立つ。
+Covers edge shape (straight / bent), approach direction into a box, how to cross container boundaries, and label placement. Use this together with [§4](#4-aligning-connected-elements-making-straight-arrows-work) for how to align center coordinates.
 
-**ルール**:
-- 子要素の配置が決まったら、親コンテナの width / height を見直す
-- 縦横両方向で、不要な余白（特に下部・右側）がないか確認する
-- 子要素を削除・縮小した後は、必ず親コンテナも縮小する
-- **子要素が 1 つだけの場合、水平方向はコンテナの中心に揃える**（`子要素 x = (コンテナ幅 - 子要素幅) / 2`）。垂直方向はラベル領域を除いた利用可能エリアの中心に揃える
-- **同レベルのサービスボックスはサイズと整列を揃える**: 横並びなら**高さ + 上端 Y** を、縦並びなら**幅 + 左端 X** を一致させる。内部要素の量が異なっても視覚的な統一感を優先する。
-  - ⚠️ **右端（または下端）だけ揃えて幅（高さ）が違うと、反対側の端がずれて見える**。サイズと整列は必ずセットで確認する。実例（2026 CAP-RAG）: 左に縦スタックした Solace と API Client が、右端は 180 で一致していたが 幅 140/145・左端 40/35 がずれて不揃いに見えた → 両方を 幅145・左端35 に統一して解消
+### 1a. When to Use Straight vs. Orthogonal
 
-**コンテナ内の推奨余白**:
-- 左右: 各 30〜55 px（**左右は必ず等しくする**。片側だけ広い／狭いと、内側コンテナが左右どちらかに寄って見える。子要素の位置を動かした後は、親コンテナの左右余白を必ず左右対称に取り直す）
-- 上: 40 px（ラベルが入る場合は下記参照）
-- 下: 40〜55 px（下に別コンテナ／アイコン（CIS 等）をぶら下げる場合は、その分だけ下方向は広くなってよい。上下の非対称は許容するが、左右は対称にする）
-- 子要素同士の水平間隔: 100 px 前後（アイコン左端から次のアイコン左端まで 170 px が目安）
+> Logical principle, "align data flows in a straight line" → [`../rules/conventions.md` §3](../rules/conventions.md#3-align-data-flows-in-a-straight-line)
 
-> 失敗例（2026 external-ui）: Custom Domain を Subaccount 内へ移し主フローを右にずらした際、BTP コンテナの左余白 140px / 右余白 35px と非対称になり、Subaccount が右に寄って見えた。BTP.x と width を調整して左右とも 45px に揃えて解消。**外側コンテナの左右余白は左右対称**を原則とする。
+Draw connections between elements that are arranged in a straight line as a **straight (direct) arrow**. Using orthogonal when there's no need to bend introduces an unnatural bend, so avoid it. Only use **orthogonal (bent) lines** between elements that aren't arranged in a straight line.
 
-**ラベル付きコンテナの上部余白**:
+### 1b. Forbid "L-Shaped Approaches" Into a Box (Prefer Straight Lines)
 
-ラベルの種類によって、子要素の開始 Y 位置（コンテナ基準）が変わる:
+**Never create an L-shaped arrow** that extends horizontally (or vertically) from the source and then bends at a right angle to pierce a **non-facing edge** of the target box (entering the bottom/top edge despite coming from the side, or the left/right edge despite coming from above/below). Don't let the principle "orthogonal is allowed only between elements not arranged in a straight line" become an excuse for a lazy L-shaped approach. **First consider adjusting the position of the source so it can connect with a straight line.**
 
-| ラベル種別 | 例 | 子要素の開始 Y |
+- ❌ Bad example: extending rightward from an element on the left, then bending upward just before the target to pierce the box's **bottom edge** (a line "coming in from the side and entering from the bottom")
+- ✅ Good example: align the source's center Y with a point on the target's left edge, and pierce the **left edge with a horizontal straight line** (matching center coordinates as described in [§4 Axis Alignment](#4-aligning-connected-elements-making-straight-arrows-work))
+- When a target has multiple inputs that can't all be aligned in a straight line, draw multiple straight lines entering **different heights/positions on the same edge** (keeping each individual line straight). If the target is a **box** rather than an icon, you can align multiple horizontal straight lines onto the same edge just by varying `entryY`
+- Orthogonal is truly necessary only when neither the source nor the target can be moved, and they can't be aligned on facing edges (e.g., the §6a case of branching from a common root to multiple targets)
+
+> Goal: keeping the arrow's entry and exit directions aligned to "the centers of facing edges" makes it easier for the reader to trace the line. An L-shaped approach makes it ambiguous "which edge does this enter from," and entering the bottom edge in particular tends to trigger the label-piercing problem described in §10 (upward-pointing arrows).
+
+### 1c. For Edges That Cross a Container Boundary, Put Bend Points and Labels in a Clear Zone Outside the Border
+
+An edge going from an element inside a container to an **element outside it** (e.g., a service inside BTP → OpenAI outside BTP) crosses the container's border. In this case:
+
+- **Cross the border at a right angle, vertically or horizontally, exactly once.** Don't let the line cross the border diagonally, or run alongside it for a long stretch
+- **Don't place the edge's bend point (a horizontal jog) or its label directly on top of the border line.** If a bend point or label overlaps the border (of the Subaccount / BTP, etc.), both the line and the text become unreadable. Push the bend point down into a **clear zone outside the border** (e.g., empty space below the container's bottom edge)
+- To make that possible, **leave enough clear space (roughly 60–80px) between the container and the external target**, and place waypoints via `<Array as="points">` so the horizontal jog lands inside that zone (at least 15px away from the border line)
+- When multiple edges pass through the same zone (e.g., two lines going from the bottom of BTP to OpenAI), offset each label's Y / X so they don't overlap
+
+> Failure example (2026 CAP-RAG): for the edge from CI inside BTP → OpenAI outside BTP, orthogonal's automatic jog happened to land exactly on the Subaccount's bottom edge, so the `create embedding` label and the horizontal line overlapped the border and became unreadable. Fixed by moving the external target (OpenAI) down 45px to widen the clear zone, and using a waypoint to push the horizontal jog outside the border (40px below the border line).
+
+> Related: the official Foundation Spacing rule, "spacing between objects should be even, roughly the height of the SAP logo" → [the Spacing section of `../GUIDELINES.md`](../GUIDELINES.md#spacing)
+
+### 1d. Keep Edge Labels Off Bend Points, Centered on a Straight Segment; Align the Height of Parallel Labels
+
+For an edge with a bend point (corner), **don't place its label on top of the bend point** (it hides the shape of the line, making the path unreadable). Also, floating it away from the line makes it **unclear which line it belongs to**. To avoid both:
+
+- **Place the label on a straight segment** (a horizontal or vertical straight part). Avoid the bend point
+- **Center the label on the line** (set `<mxPoint as="offset">` to `x=0;y=0`). Having the line pass through the label's center makes it instantly clear "this is that line's label." Don't float it away
+- Specify the anchor position along the path using `mxGeometry`'s `relative="1"` + `x` (−1 = source ... +1 = target, 0 = midpoint). If you want it at a specific Y / X, back-calculate `x` from the ratio along the path length (`x = 2 × (distance from source / total path length) − 1`)
+- **Align the Y (height) of multiple parallel/related edge labels.** Matching each edge's midpoint Y (for a straight line, `(source.y + target.y)/2`), or aligning them to the same Y via `relative`'s `x`, improves the overall readability of the diagram.
+
+> Example (2026 CAP-RAG): the two labels `create embedding` (a bent line) and `query embedding + answer` (a straight line) were both placed at the center of each edge's vertical segment (so the line passes through the center of the text), aligned at Y=412.5. Since `create embedding`'s path length is 300 and we wanted it at a distance of 112.5 from the source (Y=412.5), `x = 2×(112.5/300) − 1 = −0.25`.
+
+---
+
+## 2. Container Size and Margins (Avoid Wasted Space, Align Child Elements)
+
+Once the internal elements of a Subaccount or BTP container are placed, size the container to **fit what's actually needed**. Services consisting of just an icon + label are surprisingly small, so leaving a big box sized for the old layout makes the empty space stand out.
+
+**Rules**:
+- Once child element placement is settled, revisit the parent container's width / height
+- Check for unneeded margins (especially on the bottom and right) in both directions
+- After deleting or shrinking child elements, always shrink the parent container too
+- **When there's only one child element, center it horizontally** (`child x = (container width - child width) / 2`). Vertically, center it within the available area (excluding the label region)
+- **Match size and alignment across sibling service boxes at the same level**: for a horizontal arrangement, match **height + top Y**; for a vertical arrangement, match **width + left X**. Prioritize visual consistency even when the amount of internal content differs
+  - ⚠️ **If you only align one edge (right or bottom) while widths (heights) differ, the opposite edge ends up misaligned.** Always check size and alignment together. Example (2026 CAP-RAG): Solace and API Client, stacked vertically on the left, had their right edges matching at 180, but widths of 140/145 and left edges of 40/35 didn't match, making them look uneven → fixed by unifying both to width 145, left edge 35
+
+**Recommended margins inside a container**:
+- Left/right: 30–55 px each (**left and right must always be equal**. If one side is wider or narrower, the inner container appears to drift to one side. Whenever you move a child element's position, always re-check that the parent container's left/right margins remain symmetric)
+- Top: 40 px (see below when there's a label)
+- Bottom: 40–55 px (if another container/icon (e.g. CIS) hangs below, the bottom can be wider accordingly. Top/bottom asymmetry is acceptable, but left/right must be symmetric)
+- Horizontal spacing between child elements: around 100 px (roughly 170 px from one icon's left edge to the next icon's left edge)
+
+> Failure example (2026 external-ui): when Custom Domain was moved inside the Subaccount and the main flow shifted right, the BTP container ended up with an asymmetric left margin of 140px / right margin of 35px, making the Subaccount look shifted to the right. Fixed by adjusting BTP.x and width to make both margins 45px. **As a rule, the outer container's left/right margins should be symmetric.**
+
+**Top margin for a labeled container**:
+
+The label type affects where child elements start (relative to the container) along Y:
+
+| Label type | Example | Child element start Y |
 |---|---|---|
-| SAP ロゴ + タイトル（別セル） | BTP コンテナ | **90〜110 px** |
-| 埋め込みテキストラベル | Subaccount | **50〜60 px** |
-| サービスアイコン + タイトル（別セル） | BWZ サービスボックス | **50〜60 px** |
+| SAP logo + title (separate cell) | BTP container | **90–110 px** |
+| Embedded text label | Subaccount | **50–60 px** |
+| Service icon + title (separate cell) | BWZ service box | **50–60 px** |
 
-埋め込みテキストラベル（`spacingTop=10` + `fontSize=12`）の場合、ラベル下端は約 y=28。子要素を y=50 以降に配置することで、ラベルとの間に **20 px 以上の隙間**を確保する。
+For an embedded text label (`spacingTop=10` + `fontSize=12`), the label's bottom edge sits at about y=28. Placing child elements at y=50 or later ensures **at least 20 px of gap** from the label.
 
-**SAP サービスアイコンのラベルはみ出しに注意**:
+**Watch for SAP service icon labels overflowing**:
 
-SAP サービスアイコン（`verticalLabelPosition=bottom`）のラベルはアイコンの geometry（50×50）の**外側**に描画される。コンテナサイズの計算時はアイコン底辺ではなく**ラベル底辺**を基準にする。
+The label of an SAP service icon (`verticalLabelPosition=bottom`) is drawn **outside** the icon's geometry (50×50). When sizing a container, base the calculation on the **label's bottom edge**, not the icon's bottom edge.
 
-- **下方向**: 2 行ラベル（`fontSize=12`）はアイコン底辺から約 **30〜35 px** 下に伸びる。コンテナの下部余白はラベル底辺から 20 px 以上確保する
-- **左右方向**: ラベルはアイコン中心に対して左右均等に配置される。ラベル幅がアイコン幅（50 px）を超えると左右にはみ出す。コンテナ端に近いアイコンは**ラベル幅の半分**以上の側面余白を確保する
+- **Downward**: a 2-line label (`fontSize=12`) extends roughly **30–35 px** below the icon's bottom edge. Leave at least 20 px of bottom margin below the label's bottom edge
+- **Left/right**: the label is centered horizontally on the icon. If the label width exceeds the icon width (50 px), it overflows to the sides. For icons near the edge of the container, leave a side margin of at least **half the label width**
 
-**実測値の参考**（2 サービスを横並びに配置した Subaccount）:
+**Reference measurements** (a Subaccount with 2 services placed side by side):
 - Subaccount: 330×210
-- 内部の SAP サービスアイコン 2 個（56×56）が同じ Y で横並び
-- BTP 全体（Subaccount + その下に CIS コンテナ 280×150）: 410×460
+- 2 SAP service icons inside (56×56), side by side at the same Y
+- The whole BTP (Subaccount + a CIS container of 280×150 below it): 410×460
 
 ---
 
-## 3. 標準サイズ
+## 3. Standard Sizes
 
-> 関連: 公式 Icons ルール（SAP BTP Service Icon はグレー背景円付きバージョン必須 / Generic Icon はニュートラルグレー） → [`../GUIDELINES.md` の Icons セクション](../GUIDELINES.md#iconsアイコン)。公式テキストには具体 px 仕様が無いため、下記の標準サイズはプロジェクト独自の運用値。
+> Related: the official Icons rules (SAP BTP Service Icons must use the version with the grey background circle / Generic Icons are neutral grey) → [the Icons section of `../GUIDELINES.md`](../GUIDELINES.md#icons). Since the official text has no concrete px spec, the standard sizes below are project-specific operational values.
 
-| 要素 | 標準サイズ | 備考 |
+| Element | Standard size | Notes |
 |---|---|---|
-| SAP サービスアイコン（`mxgraph.sap.icon`、単独配置） | **50×50** | Subaccount 直下などで単独配置する場合 |
-| SAP サービスアイコン（ボックス内左上の識別用） | **32×32** | サービスボックス（BWZ・CF 等）の左上にアイコン+タイトルとして置く場合。詳細は [`elements.md` の「サービスアイコン付きサービスボックス」](elements.md#サービスアイコン付きサービスボックス) |
-| Generic Icon（`shape=image` + base64 SVG） | **40×40（正方形）** | 既知のアスペクト比があるアイコンは下表を使う。未知のアイコンは正方形で仮配置し、人間が後で調整する |
-| SAP On-Premise / Cloud Solutions 矩形 | 120×60 | |
-| 3rd-party Identity Provider 矩形 | 120×60 | |
+| SAP service icon (`mxgraph.sap.icon`, standalone) | **50×50** | For standalone placement, e.g. directly under a Subaccount |
+| SAP service icon (identifying icon at the top-left of a box) | **32×32** | For placing an icon + title at the top-left of a service box (BWZ, CF, etc.). See ["Service Box With a Service Icon"](elements.md#service-box-with-a-service-icon) in `elements.md` |
+| Generic Icon (`shape=image` + base64 SVG) | **40×40 (square)** | Use the table below for icons with a known aspect ratio. For unknown icons, place a temporary square and let the human adjust it later |
+| SAP On-Premise / Cloud Solutions rectangle | 120×60 | |
+| 3rd-party Identity Provider rectangle | 120×60 | |
 
-**Generic Icon の既知アスペクト比**:
+**Known aspect ratios for Generic Icons**:
 
-| アイコン | アスペクト比 (w:h) | プレースホルダサイズ (幅=40 基準) |
+| Icon | Aspect ratio (w:h) | Placeholder size (based on width=40) |
 |---|---|---|
 | Application Clients | 28:23 | **40×33** |
 
-上記に該当しないアイコンは 40×40（正方形）で仮配置する。
+Icons not covered above should get a temporary placement at 40×40 (square).
 
-**Generic Icon のプレースホルダ配置**:
-- Claude は Generic Icon の base64 データを扱わない（WORKFLOW.md 参照）
-- Claude は **40×40 の正方形の空矩形**（`value=""`、`dashed=1` の破線枠）を placeholder として仮配置する
-- **ラベルはプレースホルダの子要素（`parent="<placeholder_id>"`）として配置する**。これにより、draw.io 上でプレースホルダを移動するとラベルも一緒に動く（SAP サービスアイコンと同じ操作感）。ラベルの `value` はプレースホルダではなく別セルに持たせるため、人間が SVG 画像に差し替えてもラベルは消えない
-- ラベル text セルの例: `text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=11;fontColor=default;fontFamily=Helvetica;` を `parent="<placeholder_id>"` で配置。座標はプレースホルダ基準の**相対座標**で、プレースホルダ底辺から 4〜6 px 下（例: `y="44"`）、ラベル幅がプレースホルダより広い場合は負の `x` でセンタリングする（例: ラベル幅 90、プレースホルダ幅 40 → `x="-25"`）
-- **縦方向の矢印はラベルから出す**: プレースホルダとラベルが縦に並んでいる場合、縦方向に伸びる矢印の source は**ラベル text セル**にする（[§6 参照](#6-エッジの接続点と発射点の指定)）。ラベルが子要素であっても、エッジの source/target として指定できる
-- アスペクト比が既知のアイコンは上記の表に従ったサイズで仮配置する。未知のアイコンは正方形で仮配置し、人間が差し替え時にサイズ調整する
-- 重要なのは**位置を先に確定させる**こと。アイコン差し替え後に人間が大きさを微調整しても、中心座標さえ合っていればレイアウトは崩れない
-
----
-
-## 4. 接続要素の軸揃え（直線矢印を成立させる）
-
-矢印で繋がる一連の要素は、**中心座標（X または Y）を完全に一致**させる。中心が 1 px でもずれると、draw.io は自動的に orthogonal に折れ曲げてしまう。
-
-**横並びの実例**（同じ Y 中心 = 210）:
-- `ac`: y=190, height=40 → 中心 Y = 210
-- `bwz`: y=182, height=56 → 中心 Y = 210
-- `tc`: y=182, height=56 → 中心 Y = 210
-
-**縦並びの実例**（同じ X 中心 = 160）:
-- `eu`: x=140, width=40 → 中心 X = 160
-- `ac`: x=140, width=40 → 中心 X = 160
-
-異なるサイズの要素を一直線に揃えるには、`y = center − height/2`（または X も同様）を計算して配置する。
-
-> 関連: 公式 Lines / Connectors の方向とセマンティック色のルール → [`../GUIDELINES.md` の Lines / Connectors セクション](../GUIDELINES.md#lines--connectors線コネクタ)
+**Placing a Generic Icon placeholder**:
+- Claude does not handle Generic Icon base64 data (see WORKFLOW.md)
+- Claude places a **40×40 empty square** (`value=""`, `dashed=1` dashed border) as a temporary placeholder
+- **Place the label as a child element of the placeholder** (`parent="<placeholder_id>"`). This way, moving the placeholder in draw.io moves the label with it (the same feel as an SAP service icon). Since the label's `value` lives on a separate cell rather than on the placeholder, when the human later swaps in the SVG image, the label doesn't disappear
+- Example label text cell: `text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=0;strokeColor=none;fillColor=none;fontSize=11;fontColor=default;fontFamily=Helvetica;`, placed with `parent="<placeholder_id>"`. Coordinates are **relative to the placeholder**: 4–6 px below the placeholder's bottom edge (e.g. `y="44"`), and if the label is wider than the placeholder, center it with a negative `x` (e.g. label width 90, placeholder width 40 → `x="-25"`)
+- **Vertical arrows should originate from the label**: when a placeholder and its label are stacked vertically, the source of a vertically extending arrow should be the **label text cell** (see [§6](#6-specifying-edge-connection-and-exit-points)). Even though the label is a child element, it can still be specified as an edge's source/target
+- For icons with a known aspect ratio, use the size from the table above for the temporary placement. For unknown icons, place a temporary square and let the human resize it when swapping the icon in
+- What matters is **fixing the position first**. Even if the human fine-tunes the size after swapping in the real icon, the layout won't break as long as the center coordinates line up
 
 ---
 
-## 5. CIS 配置の実装詳細
+## 4. Aligning Connected Elements (Making Straight Arrows Work)
 
-> 論理原則「CIS は Subaccount の下に配置する」→ [`../rules/conventions.md` §5](../rules/conventions.md#5-sap-cloud-identity-services-は-subaccount-の下に配置する)
+A series of elements connected by an arrow must have their **center coordinates (X or Y) match exactly**. Even a 1 px offset in the center will cause draw.io to automatically bend it into an orthogonal line.
 
-**実装ルール**:
-- CIS アイコン（50×50）を Subaccount の下辺中央付近、BTP コンテナ内の下段に置く
-- Subaccount ↔ CIS の trust 線は短い垂直線になる（Subaccount 下辺中央 → CIS 上辺中央、ピンク双方向）
-- BTP コンテナの高さは CIS の**ラベル底辺**まで含めた下部余白で確保する
+**Horizontal example** (same Y center = 210):
+- `ac`: y=190, height=40 → center Y = 210
+- `bwz`: y=182, height=56 → center Y = 210
+- `tc`: y=182, height=56 → center Y = 210
 
-**BTP コンテナ高さの計算式**:
+**Vertical example** (same X center = 160):
+- `eu`: x=140, width=40 → center X = 160
+- `ac`: x=140, width=40 → center X = 160
+
+To align elements of different sizes in a straight line, compute `y = center − height/2` (and likewise for X) to position them.
+
+> Related: the official Lines / Connectors rules for direction and semantic colors → [the Lines / Connectors section of `../GUIDELINES.md`](../GUIDELINES.md#lines--connectors)
+
+---
+
+## 5. Implementation Details for CIS Placement
+
+> Logical principle, "place CIS below the Subaccount" → [`../rules/conventions.md` §5](../rules/conventions.md#5-place-sap-cloud-identity-services-below-the-subaccount)
+
+**Implementation rules**:
+- Place the CIS icon (50×50) near the center of the Subaccount's bottom edge, in the lower section inside the BTP container
+- The trust line between Subaccount and CIS becomes a short vertical line (Subaccount bottom-center → CIS top-center, pink, bidirectional)
+- Size the BTP container's height to include bottom margin extending to CIS's **label bottom edge**
+
+**BTP container height formula**:
 
 ```
-BTP 高さ = (SA の y + SA の height) − BTP の y   ← SA 下端までの距離
-         + 30                                     ← SA〜CIS 間のギャップ
-         + 50                                     ← CIS アイコン高さ
-         + 30                                     ← ラベル高さ（2行 × fontSize=12 の推定値）
-         + 20                                     ← 下部余白
+BTP height = (SA's y + SA's height) − BTP's y   ← distance to SA's bottom edge
+           + 30                                  ← gap between SA and CIS
+           + 50                                  ← CIS icon height
+           + 30                                  ← label height (estimate for 2 lines at fontSize=12)
+           + 20                                  ← bottom margin
 ```
 
-**実測値の参考**（2026-04-17-01 ダイアグラム）:
-- BTP: y=30, SA: y=80, h=300 → SA 下端=380
-- CIS: y=410（ギャップ 30px）、アイコン底辺=460、ラベル底辺 ≈ 490
-- BTP 高さ = (380−30) + 30 + 50 + 30 + 20 = **480** → BTP 下端=510
+**Reference measurements** (the 2026-04-17-01 diagram):
+- BTP: y=30, SA: y=80, h=300 → SA bottom edge=380
+- CIS: y=410 (30px gap), icon bottom edge=460, label bottom edge ≈ 490
+- BTP height = (380−30) + 30 + 50 + 30 + 20 = **480** → BTP bottom edge=510
 
 ---
 
-## 6. エッジの接続点と発射点の指定
+## 6. Specifying Edge Connection and Exit Points
 
-矢印の接続点（entry / exit）の明示と、アイコンのラベルを貫かない発射点（source 側）の作り方を扱う。
+Covers making an arrow's connection points (entry / exit) explicit, and how to construct an exit point (the source side) that doesn't pierce an icon's label.
 
-**接続点（entry）を明示する**: 矢印の source / target だけを指定すると、draw.io が自動でルーティングを決めるため、コンテナの位置調整で経路が崩れることがある。重要な矢印には **`entryX` / `entryY`** を明示的に指定する。
+**Make the connection point (entry) explicit**: if you only specify an edge's source / target, draw.io decides the routing automatically, which can break the path when a container's position is adjusted. For important arrows, explicitly specify **`entryX` / `entryY`**.
 
-| 目的 | 指定 |
+| Goal | Setting |
 |---|---|
-| 相手の上辺中央に刺す | `entryX=0.5;entryY=0;entryDx=0;entryDy=0` |
-| 相手の下辺中央に刺す | `entryX=0.5;entryY=1;entryDx=0;entryDy=0` |
-| 相手の左辺中央に刺す | `entryX=0;entryY=0.5;entryDx=0;entryDy=0` |
-| 相手の右辺中央に刺す | `entryX=1;entryY=0.5;entryDx=0;entryDy=0` |
+| Pierce the target's top edge, centered | `entryX=0.5;entryY=0;entryDx=0;entryDy=0` |
+| Pierce the target's bottom edge, centered | `entryX=0.5;entryY=1;entryDx=0;entryDy=0` |
+| Pierce the target's left edge, centered | `entryX=0;entryY=0.5;entryDx=0;entryDy=0` |
+| Pierce the target's right edge, centered | `entryX=1;entryY=0.5;entryDx=0;entryDy=0` |
 
-**使用例**:
-- TC → On-Premise / Cloud Solutions: `entryX=0;entryY=0.5`（相手の左辺中央）
-- Subaccount ↔ CIS (trust): `exitX=0.5;exitY=1` → `entryX=0.5;entryY=0`（SA 下辺中央 → CIS 上辺中央、垂直直線）
-- Application Clients → CIS (authenticate): source は AC の**ラベル text セル**（プレースホルダではない）。`exitX=0.5;exitY=1` → `entryX=0;entryY=0.5`（ラベル下辺中央 → CIS 左辺中央、orthogonal）
+**Usage examples**:
+- TC → On-Premise / Cloud Solutions: `entryX=0;entryY=0.5` (target's left edge, centered)
+- Subaccount ↔ CIS (trust): `exitX=0.5;exitY=1` → `entryX=0.5;entryY=0` (SA bottom-center → CIS top-center, a vertical straight line)
+- Application Clients → CIS (authenticate): the source is AC's **label text cell** (not the placeholder). `exitX=0.5;exitY=1` → `entryX=0;entryY=0.5` (label bottom-center → CIS left-center, orthogonal)
 - CIS → 3rd-party IdP (delegates auth): `entryX=0;entryY=0.5`
 
-**縦方向の矢印はラベルから出す**: Generic Icon プレースホルダ（図形）とラベル（text セル）が縦に並んでいる場合、縦方向に伸びる矢印の source は**ラベル text セル**にする（図形ではない）。図形から出すとラベルを飛び越えた不自然な矢印になる。
+**Vertical arrows should originate from the label**: when a Generic Icon placeholder (shape) and its label (text cell) are stacked vertically, the source of a vertically extending arrow should be the **label text cell** (not the shape). Coming from the shape produces an unnatural arrow that jumps over the label.
 
-- End User → Application Clients（縦配置）: source=`eu_label`（End User のラベル）
+- End User → Application Clients (vertical layout): source=`eu_label` (End User's label)
 - Application Clients → CIS (authenticate): source=`ac_label`
 
-source 側も同様に `exitX` / `exitY` で指定可能。複数のエッジが同じ辺から出る場合は分散させる。
+The source side can likewise be specified with `exitX` / `exitY`. When multiple edges leave from the same edge of a shape, spread them out.
 
-**SAP サービスアイコン（埋め込みラベル）から下向き矢印を出す場合は、ラベルを別セルに分離して source にする**: SAP サービスアイコン（`mxgraph.sap.icon`）はデフォルトでラベルが**アイコンセルに埋め込み**。そのまま下向き矢印を出すと geometry 下辺（=ラベルの真上）が発射点になり、**ラベル文字を矢印が貫く**。
+**When drawing a downward arrow from an SAP service icon (with an embedded label), separate the label into its own cell and use that as the source**: an SAP service icon (`mxgraph.sap.icon`) has its label **embedded in the icon cell** by default. Drawing a downward arrow straight from it makes the exit point the bottom edge of the geometry (= right above the label), so **the arrow pierces the label text**.
 
-確実な解決策は **Generic Icon と同じパターン**（本節冒頭の「縦方向の矢印はラベルから出す」）を SAP アイコンにも適用すること:
+The reliable fix is to apply **the same pattern used for Generic Icons** (the "vertical arrows should originate from the label" approach described at the top of this section) to SAP icons as well:
 
-1. アイコンセルの `value=""` にする（埋め込みラベルを外す）
-2. ラベルを **独立した text セル**として、アイコン下辺の直下に配置する（`text;html=1;align=center;verticalAlign=top;...;fontSize=12;`、アイコン中心 X に合わせて配置、`y = アイコン下辺`）
-3. 下向きエッジの **source をそのラベルセル**にし、`exitX=0.5;exitY=1`（ラベル下辺中央）から出す
+1. Set the icon cell's `value=""` (remove the embedded label)
+2. Place the label as an **independent text cell**, directly below the icon's bottom edge (`text;html=1;align=center;verticalAlign=top;...;fontSize=12;`, aligned to the icon's center X, `y = icon's bottom edge`)
+3. Make the downward edge's **source that label cell**, exiting from `exitX=0.5;exitY=1` (the label's bottom-center)
 
-これでラベルセルの下辺が発射点になり、矢印がラベル文字を貫かない。横方向のエッジ（左右の辺に刺す）は従来どおりアイコンセルを source/target にしてよい（下向きエッジだけラベルセルから出す）。
+This makes the label cell's bottom edge the exit point, so the arrow no longer pierces the label text. Horizontal edges (piercing a left/right edge) can still use the icon cell as source/target as before (only downward edges need to come from the label cell).
 
-**ラベルセルは text 高さより少し高くして「文字と矢印の隙間」を作る**: `verticalAlign=top` なら文字はセル上端に寄るので、`height` を実テキスト高さ（1 行 ≈ 17px）より **6〜8px 大きく**取ると、セル下辺（=発射点）が文字から少し離れ、ラベルと矢印がくっつかない。目安: 1 行ラベル `height=24`（文字 17 + 余白 7）、2 行ラベル `height=38` 前後。余白が無いと「くっつきすぎ」、12px 以上取ると「空きすぎ」に見える（実機確認済みの適正値）。
+**Make the label cell slightly taller than the text, to leave a gap between the text and the arrow**: with `verticalAlign=top`, the text sits at the top of the cell, so making `height` **6–8px larger** than the actual text height (roughly 17px for one line) puts a bit of distance between the cell's bottom edge (= the exit point) and the text, so the label and arrow don't touch. Guideline: `height=24` for a 1-line label (17px text + 7px margin), around `height=38` for a 2-line label. No margin looks "too tight"; 12px or more looks "too much space" (these are field-verified appropriate values).
 
-> ⚠️ **`exitDy` でアイコン下辺から下にオフセットする方法は使わない**: orthogonal エッジでは外周からオフセット点までの**スタブ線**が描かれ、そのスタブがラベルを貫くため解決にならない（検証済み）。必ず上記のラベル別セル化で対応する。
+> ⚠️ **Don't offset downward from the icon's bottom edge using `exitDy`**: with an orthogonal edge, a **stub line** gets drawn from the perimeter to the offset point, and that stub still pierces the label — this doesn't solve the problem (verified). Always use the separate label cell approach above instead.
 
-- **上向き矢印（アイコンへ下から刺す）は §10 で原則禁止**。本ルールは「アイコンから**出る**下向き矢印」がラベルを貫かないようにするためのもの。設計上どうしても上ラベルが必要になる前に、まずこのラベル別セル化で解決できないか検討する
+- **Upward-pointing arrows (piercing an icon from below) are forbidden as a rule per §10**. This rule is about keeping a downward arrow **leaving** an icon from piercing the label. Before concluding you really need a top label in your design, first consider whether separating the label into its own cell (as above) solves it
 
 ---
 
-## MCP / 実装上の制約
+## MCP / Implementation Constraints
 
-- `parent_id` でコンテナの子要素にはできない（drawio-mcp-server の制約）→ 絶対座標で重ねる
-- `import-diagram` は動作が遅い・タイムアウトする場合あり → `add-rectangle` / `edit-cell` を使う、または XML を人間が手貼り（WORKFLOW.md 参照）
-- ロゴサイズを 37×19 より大きくすると `imageAspect=0` の影響で横伸びする
+- You can't make something a container's child element via `parent_id` (a constraint of drawio-mcp-server) → overlay it using absolute coordinates instead
+- `import-diagram` can be slow / sometimes times out → use `add-rectangle` / `edit-cell` instead, or have the human paste the XML by hand (see WORKFLOW.md)
+- Making the logo larger than 37×19 stretches it horizontally, due to the effect of `imageAspect=0`

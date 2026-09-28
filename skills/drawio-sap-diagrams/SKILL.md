@@ -5,145 +5,145 @@ description: Use when creating, modifying, or refining SAP BTP architecture diag
 
 # drawio-sap-diagrams
 
-Claude と協働して SAP BTP アーキテクチャ図を draw.io で作成するためのスキル。人間は言葉で設計を伝え、Claude が Mermaid → draw.io XML に落とし込む。
+A skill for creating SAP BTP architecture diagrams in draw.io, working together with Claude. The human describes the design in words, and Claude turns it into Mermaid → draw.io XML.
 
-> **会話トーン**: この SKILL.md 内で「人間」「ユーザー」と書かれているのは役割分担の説明表記。実際に会話でユーザーに何かを依頼するときは、主語を省いた二人称の丁寧命令形を使う（例: ❌「人間が XML を draw.io に貼り付けてください」→ ✅「XML を draw.io に貼り付けてください」）。
+> **Conversational tone**: In this SKILL.md, "human" and "user" are used to describe the division of roles. When actually asking the user to do something in conversation, use a polite second-person imperative without an explicit subject (e.g., ❌ "The human should paste the XML into draw.io" → ✅ "Paste the XML into draw.io").
 
 ## Overview
 
-言葉 → Mermaid → draw.io XML の 3 段論法で進める。
+Proceed through the three-step chain: words → Mermaid → draw.io XML.
 
-- **なぜ Mermaid を間に挟むか**: draw.io XML は冗長で人間がレビューしづらい。Mermaid で論理構造（ノード・エッジ・グルーピング）だけを先に確定させることで、draw.io XML 生成時はスタイルに集中できる。
-- **XML は手貼り**: draw.io への反映は人間がコピペで行う。ツール経由で直接描画するより速い。
+- **Why put Mermaid in between**: draw.io XML is verbose and hard for a human to review. By first nailing down just the logical structure (nodes, edges, groupings) in Mermaid, you can focus purely on style when generating the draw.io XML.
+- **XML is pasted by hand**: applying it to draw.io is done by the human, via copy-paste. This is faster than drawing directly through a tool.
 
 ---
 
 ## Workflow
 
 ```
-1. 人間: 設計を言葉で記述
+1. Human: describe the design in words
       ↓
-2. Claude: Mermaid 図を作成して論理構造を可視化（diagram.md）
+2. Claude: create a Mermaid diagram to visualize the logical structure (diagram.md)
       ↓
-3. 人間: Mermaid プレビューで論理構造を確認・修正指示
+3. Human: review the logical structure in the Mermaid preview and give correction instructions
       ↓
-4a. Claude: 要素棚卸しパス — セル一覧（ID/サイズ/親子/エッジ）をテキストで作成
+4a. Claude: element inventory pass — create a text list of cells (ID / size / parent-child / edges)
       ↓
-4b-1. Claude: 論理座標パス — 主軸変数（main_axis_Y / GAP 等）と相対式で各要素位置を定義
+4b-1. Claude: logical coordinate pass — define each element's position with main-axis variables (main_axis_Y / GAP, etc.) and relative formulas
       ↓
-4b-2. Claude: 物理座標パス — 主軸の値を 1 箇所で確定し、式を評価して XML に書き出す
+4b-2. Claude: physical coordinate pass — fix the main-axis values in one place, evaluate the formulas, and write out the XML
       ↓
-4.5 Claude: sap-diagram-review（構造レビュー）— XML ベースで自動チェック
-      ↑↓ 修正発生時はここを往復
-5. 人間: XML を draw.io に手動で貼り付け
+4.5 Claude: sap-diagram-review (structural review) — automated XML-based check
+      ↑↓ if fixes are needed, iterate back to here
+5. Human: manually paste the XML into draw.io
       ↓
-5.5 Claude: sap-diagram-review（ビジュアルレビュー）— スクリーンショットで見た目チェック
-      ↑↓ 修正発生時は 4b-1 / 4b-2 まで戻り、再度 4.5 → 5 → 5.5 を回す
+5.5 Claude: sap-diagram-review (visual review) — visual check via screenshot
+      ↑↓ if fixes are needed, go back to 4b-1 / 4b-2, then repeat 4.5 → 5 → 5.5
 ```
 
-**修正ループのルール**: ステップ5 / 5.5 で問題が見つかったら、勝手に Edit せずに **必ず 4b-1（論理座標パス）まで戻る**。何が変わるか（主軸変数 / 相対式）を先に整理してから 4b-2 で値を再計算し、Step 4.5 を再実行する。これにより部分修正で全体整合が崩れる事故を防ぐ。
+**Fix-loop rule**: if a problem is found at step 5 / 5.5, do **not** Edit ad hoc — always **go back to 4b-1 (logical coordinate pass)**. First sort out what changes (main-axis variables / relative formulas), then recompute the values at 4b-2, and re-run Step 4.5. This prevents partial fixes from breaking overall consistency.
 
 ---
 
 ## Output Location
 
-出力先は利用プロジェクトの `CLAUDE.md` の指示に従う。未指定の場合は以下をデフォルトとして提案する:
+The output location follows the instructions in the consuming project's `CLAUDE.md`. If unspecified, the skill suggests the following as the default:
 
 ```
 diagrams/
-├── diagram.md          ← Mermaid（論理構造、ステップ2-3 の成果物）
-└── diagram.drawio      ← draw.io XML（ステップ4 の成果物、手貼り用）
+├── diagram.md          ← Mermaid (logical structure, output of steps 2-3)
+└── diagram.drawio      ← draw.io XML (output of step 4, for manual pasting)
 ```
 
-複数の図を保持したい場合は、プロジェクトの `CLAUDE.md` で日付ベースのサブディレクトリなどにカスタマイズする。
+If you want to keep multiple diagrams, customize this in the project's `CLAUDE.md` — for example, with date-based subdirectories.
 
 ---
 
-## Step 1: 設計を言葉で伝える
+## Step 1: Describe the Design in Words
 
-人間が Claude に以下を明示的に伝える。
+The human explicitly tells Claude the following:
 
-- **構成要素のリスト**（サービス名・役割）
-- **階層・所属関係**（何が何の中に入るか）
-- **関係性**（データフロー、trust、認証委譲など）
-- **SAP / 非SAP の区別**（色分けに影響）
+- **A list of components** (service names and roles)
+- **Hierarchy / membership relationships** (what belongs inside what)
+- **Relationships** (data flow, trust, authentication delegation, etc.)
+- **SAP vs. non-SAP distinction** (affects color coding)
 
-曖昧な箇所があれば Claude が番号付きで聞き返す。
-
----
-
-## Step 2-3: Mermaid で論理構造を確認
-
-Claude は Mermaid を書く前に、後述の **Conventions** 節を必ず確認し、構成パターン（End User + Application Clients のセット配置、オンプレ接続の 3 点セット、CIS の配置場所など）・ラベル規約・言語ルールに従う。
-
-出力先は `diagram.md`。人間は VSCode の Mermaid プレビューで確認し、間違いがあれば言葉で修正指示する。
-
-**注意**: Mermaid ではスタイル（色・線種）まで決めない。論理構造だけに集中する。
+If anything is ambiguous, Claude asks numbered follow-up questions.
 
 ---
 
-## Conventions（Mermaid 段階から適用）
+## Step 2-3: Verify the Logical Structure With Mermaid
 
-ダイアグラムの構成要素をどう組み合わせるか、どう配置するか、ラベルや言語をどうするかの **設計上の規約**。Mermaid（論理構造）の段階から適用する。draw.io の見た目（色・サイズ・座標の px 値）は `references/layout.md` / `references/elements.md` を参照。
+Before writing Mermaid, Claude must always check the **Conventions** section below, and follow its composition patterns (pairing End User with Application Clients, the three-part on-premise connection set, where to place CIS, etc.), labeling conventions, and language rules.
 
-### 1. 言語
+The output goes to `diagram.md`. The human reviews it in VSCode's Mermaid preview and gives correction instructions in words if there are mistakes.
 
-特に指示がない限り、ダイアグラム上の要素名は **全て英語** とする。
+**Note**: don't decide style (colors, line types) in Mermaid. Focus purely on logical structure.
 
-### 2. 矢印ラベル
+---
 
-矢印にラベルは **原則つけない**。以下のように特別な意味を持つ関係のみラベルを設定する:
+## Conventions (Applied From the Mermaid Stage)
 
-| ラベル | 用途 |
+**Design-level conventions** for how to combine diagram components, how to place them, and how to handle labels and language. These apply from the Mermaid (logical structure) stage onward. For draw.io appearance (colors, sizes, px coordinate values), see `references/layout.md` / `references/elements.md`.
+
+### 1. Language
+
+Unless otherwise instructed, **all** element names on the diagram should be in English.
+
+### 2. Arrow Labels
+
+Arrows should **generally not** be labeled. Only label relationships that carry special meaning, as follows:
+
+| Label | Purpose |
 |---|---|
-| `trust` | Subaccount ↔ Cloud Identity Services 間の信頼関係 |
-| `authenticate` | 認証フロー |
-| `delegates auth` | 認証委譲（CIS ↔ 3rd-party IdP） |
+| `trust` | The trust relationship between a Subaccount and Cloud Identity Services |
+| `authenticate` | An authentication flow |
+| `delegates auth` | Authentication delegation (CIS ↔ 3rd-party IdP) |
 
-### 3. データフローは一直線に並べる
+### 3. Align Data Flows in a Straight Line
 
-データフローやシーケンスで連続する要素は、**横方向でも縦方向でも一直線に揃える**。折れ線や段差を入れると視覚的な流れが断たれる。
+Elements that are consecutive in a data flow or sequence should be **aligned in a straight line, whether horizontal or vertical**. Bends or staggering break the visual flow.
 
-- **横並びの例**: `Application Clients` → `SAP Build Work Zone` → `SAP Task Center` は同じ高さに揃える
-- **縦並びの例**: 上から下に流れるシーケンスは同じ列に揃える
-- **L字進入を作らない**: 横から来た線をターゲット手前で曲げて下辺/上辺に刺す（「横から来て下から入る」）のは禁止。接続元の位置を調整し、相手の対向辺へ直線で刺す。揃えられない複数入力は同じ辺の異なる位置に複数の直線で刺す
+- **Horizontal example**: `Application Clients` → `SAP Build Work Zone` → `SAP Task Center` should be aligned at the same height
+- **Vertical example**: a sequence flowing top to bottom should be aligned in the same column
+- **Don't create an L-shaped approach**: bending a line that comes in from the side just before the target, so it enters the bottom/top edge ("coming in from the side and entering from the bottom"), is forbidden. Instead, adjust the position of the source so the line goes straight into the opposite edge of the target. Multiple inputs that can't be aligned should be drawn as multiple straight lines entering different points on the same edge
 
-> draw.io での実装詳細（直線 vs orthogonal の使い分け、L字進入の禁止、中心座標の px 揃え）は `references/layout.md`（§1a / §1b / §4）を参照。
+> For draw.io implementation details (when to use straight vs. orthogonal lines, banning L-shaped approaches, px-aligning center coordinates), see `references/layout.md` (§1a / §1b / §4).
 
-### 4. End User → Application Clients は常にセットで配置する
+### 4. Always Place End User and Application Clients as a Pair
 
-End User と **Application Clients**（Generic Icon）を **縦に並べて** セットで配置し、BTP 内サービスへの入口とする。End User が上、Application Clients が下。
+Place **End User** and **Application Clients** (Generic Icon) **stacked vertically** as a pair, serving as the entry point into services inside BTP. End User on top, Application Clients below.
 
-- End User → Application Clients → BTP 内サービス（Build Work Zone 等）
-- **認証線は Application Clients から出す**（End User からではない）
+- End User → Application Clients → service inside BTP (e.g. Build Work Zone)
+- **Authentication lines originate from Application Clients** (not from End User)
 
-### 5. SAP Cloud Identity Services は Subaccount の下に配置する
+### 5. Place SAP Cloud Identity Services Below the Subaccount
 
-SAP Cloud Identity Services (CIS) は BTP コンテナ内・Subaccount 外の要素。配置は **Subaccount の直下（垂直下方）** に固定する。
+SAP Cloud Identity Services (CIS) is an element inside the BTP container but outside the Subaccount. Its placement is fixed to **directly below the Subaccount (vertically)**.
 
-- Subaccount ↔ CIS の trust 線は短い垂直線になる
-- 左右や上に置くと他の要素と交差しやすく、trust 線の意味が読み取りにくくなる
+- The trust line between Subaccount and CIS becomes a short vertical line
+- Placing it to the left, right, or above makes it more likely to cross other elements, obscuring the meaning of the trust line
 
-> draw.io での実装詳細（px サイズ・余白・BTP コンテナ高さの計算）は `references/layout.md` を参照。
+> For draw.io implementation details (px sizes, margins, computing the BTP container height), see `references/layout.md`.
 
-### 6. サービスボックスからの矢印は1本にまとめる
+### 6. Consolidate Arrows From a Service Box Into One
 
-サービスボックス（Build Work Zone 等）の中に複数のコンポーネント（アプリ、Inbox 等）がある場合、**個々のコンポーネントから外部サービスへ矢印を引かず、外側のボックスから 1 本の矢印** として出す。
+When a service box (e.g., Build Work Zone) contains multiple components (an app, Inbox, etc.), **don't draw arrows from each individual component to an external service — draw a single arrow from the outer box instead**.
 
-- **理由**: 複数の矢印が1つのアイコンに集中すると見た目が煩雑になる
-- Mermaid でも `UI5 App → SPA` ではなく `BWZ → SPA` とする
+- **Reason**: multiple arrows converging on one icon looks cluttered
+- In Mermaid too, use `BWZ → SPA` rather than `UI5 App → SPA`
 
-#### 6a. サービスボックスから複数ターゲットへ出すときは「根っこ」を1点に揃える
+#### 6a. When a Service Box Fans Out to Multiple Targets, Align the "Root" to a Single Point
 
-サービスボックスが複数の異なるターゲット（例: HTML5 App Repository, XSUAA 等）へ矢印を出す場合、**ボックスの同じ 1 点（例: 上辺中央 `exitX=0.5;exitY=0`）から発射** し、そこから orthogonal ルーティングで各ターゲットへ分岐させる。
+When a service box sends arrows to several different targets (e.g., HTML5 App Repository, XSUAA), **launch them all from the same single point on the box** (e.g., top-center, `exitX=0.5;exitY=0`), then branch out to each target using orthogonal routing.
 
-- **理由**: 矢印の出発点がボックスの複数箇所に散らばると、視覚的にどこから出ているのか読みにくくなる
-- 共通の exit 点を指定すれば、draw.io の orthogonal ルータが最初の 1 セグメントを共有してくれるため、縦棒 1 本から枝分かれする見た目になる
-- 直線矢印ではなく orthogonal 矢印を使う（共通の根から異なるターゲットへ向かう以上、直線にはなり得ない）
+- **Reason**: if the arrows' starting points are scattered across multiple spots on the box, it becomes hard to tell visually where they originate
+- Specifying a common exit point lets draw.io's orthogonal router share the first segment, producing the look of a single vertical stem branching out
+- Use orthogonal arrows rather than straight ones (since they go from a common root to different targets, they can't be straight lines)
 
-### 7. サービスボックス内のアプリケーション配置
+### 7. Placing Applications Inside a Service Box
 
-Build Work Zone 等のサービスボックス内に **複数のアプリケーション** を配置する場合、**内側にコンテナ（箱）を追加** し、その中に Generic Icon プレースホルダ + テキストラベルを横並びで配置する。アプリが **1 つだけ** の場合は内側コンテナは不要で、サービスボックス内に直接 Generic Icon プレースホルダを配置する。
+When placing **multiple applications** inside a service box such as Build Work Zone, **add an inner container (box)** and place a Generic Icon placeholder + text label side by side within it. If there is **only one** application, the inner container isn't needed — place the Generic Icon placeholder directly inside the service box.
 
 ```
 ┌─ BWZ ─────────────────────────┐
@@ -155,198 +155,198 @@ Build Work Zone 等のサービスボックス内に **複数のアプリケー�
 └───────────────────────────────┘
 ```
 
-- 内側コンテナは青枠・白地・角丸（サービスボックスと同様のスタイル）
-- 各アプリは Generic Icon プレースホルダ（40×40）+ 下部テキストラベルで構成
-- アプリ同士は横並びに等間隔で配置
+- The inner container uses a blue border, white fill, rounded corners (the same style as the service box)
+- Each app consists of a Generic Icon placeholder (40×40) + a text label below it
+- Apps are laid out side by side with even spacing
 
-> draw.io での実装詳細（px サイズ・スタイル）は `references/elements.md` を参照。
+> For draw.io implementation details (px sizes, styles), see `references/elements.md`.
 
-### 8. オンプレミス／Private Cloud 接続パターン
+### 8. On-Premise / Private Cloud Connection Pattern
 
-BTP Subaccount からオンプレミスまたは Private Cloud システムへ接続する場合、以下の **3 サービスを 1 セットで Subaccount 内に配置する**:
+When connecting from a BTP Subaccount to an on-premise or Private Cloud system, **place the following 3 services together as a set inside the Subaccount**:
 
 ```
 Destination Service → Connectivity Service → Cloud Connector
 ```
 
-- **Destination Service**: 接続先の設定管理
-- **Connectivity Service**: オンプレミスへのトンネル管理
-- **Cloud Connector**: 接続先システムの箱の中に配置する（BTP 外）
+- **Destination Service**: manages the destination configuration
+- **Connectivity Service**: manages the tunnel to on-premise
+- **Cloud Connector**: place it inside the box of the target system (outside BTP)
 
-Cloud Connector は BTP 側のコンポーネントだが、図上は **接続先システムの箱の中** に描く（物理的にオンプレミス環境にインストールされるため）。
+Cloud Connector is technically a BTP-side component, but on the diagram it's drawn **inside the box of the target system** (since it's physically installed in the on-premise environment).
 
-### 9. BTP 外の SAP 製品ボックスには SAP ロゴを追加する
+### 9. Add the SAP Logo to SAP Product Boxes Outside BTP
 
-BTP 外に配置する SAP 製品（SAP S/4HANA、SAP SuccessFactors 等）の矩形には、**BTP コンテナと同じパターンで SAP ロゴ + 製品名を左上に配置する**。
+For rectangles representing SAP products placed outside BTP (SAP S/4HANA, SAP SuccessFactors, etc.), **add the SAP logo + product name at the top left, following the same pattern as the BTP container**.
 
-- 矩形の `value` は空にし、ロゴセル（`image=img/lib/sap/SAP_Logo.svg`）で製品名を表示する
-- SAP 製品であることを視覚的に明示するため
+- Leave the rectangle's `value` empty, and display the product name via the logo cell (`image=img/lib/sap/SAP_Logo.svg`)
+- This visually makes it clear that it is an SAP product
 
-> draw.io での実装詳細（フォントサイズ・配置位置）は `references/elements.md` の「SAP ロゴ」セクションを参照。
+> For draw.io implementation details (font size, placement), see the "SAP Logo" section of `references/elements.md`.
 
-### 10. 上向き矢印は原則避ける（ラベル配置との関係）
+### 10. Avoid Upward-Pointing Arrows as a Rule (Related to Label Placement)
 
-SAP サービスアイコン（`mxgraph.sap.icon`）のラベルはデフォルトでアイコン下側に描画される。そのため **下から入る矢印（上向き矢印）はラベルを貫く見た目になる**。
+The label of an SAP service icon (`mxgraph.sap.icon`) is drawn below the icon by default. As a result, **an arrow entering from below (an upward-pointing arrow) ends up piercing through the label**.
 
-**原則**: アイコンへの矢印は **横または上から入る** ように配置する（=上向き矢印を使わない）。ソース側の位置を工夫して、矢印方向を下向きまたは横向きに保つ。
+**Rule**: arrange arrows into an icon so they enter **from the side or from above** (i.e., don't use upward-pointing arrows). Adjust the position of the source side so the arrow direction stays downward or sideways.
 
-- **例**: BWZ から HTML5 App Repo / XSUAA のような従属サービスへ出す場合、従属サービスを **BWZ の下** に配置する（上に配置すると上向き矢印になりラベルと衝突する）
-- **理由**: 上向き矢印に合わせてラベル位置をアイコン上側に切り替えると、親コンテナ（Subaccount 等）のラベルとの距離が詰まり視認性が落ちる。また図全体でラベル位置が上下混在すると統一感が崩れる
+- **Example**: when drawing an arrow from BWZ to a dependent service such as HTML5 App Repo / XSUAA, place the dependent service **below BWZ** (placing it above would create an upward arrow that collides with the label)
+- **Reason**: if you switch the label position to above the icon to match an upward arrow, it ends up too close to the parent container's label (e.g., Subaccount), hurting readability. Also, mixing label positions above and below across the diagram breaks visual consistency
 
-**例外**: どうしてもレイアウトの都合で上向き矢印を避けられない場合のみ、そのアイコンのラベルを上側に切り替える（`verticalLabelPosition=top;verticalAlign=bottom`）。その場合は親コンテナのラベルとの間に **最低 20 px** の余白を確保する。
+**Exception**: only when layout constraints make an upward-pointing arrow truly unavoidable, switch that icon's label to the top (`verticalLabelPosition=top;verticalAlign=bottom`). In that case, ensure **at least 20 px** of spacing between it and the parent container's label.
 
-> draw.io での実装詳細（ラベル位置変種のスタイル差分）は `references/elements.md` の「ラベル位置の変種」セクションを参照。
+> For draw.io implementation details (style diffs for the label position variant), see the "Label Position Variants" section of `references/elements.md`.
 
-### 11. サービス名の慣例的な短縮
+### 11. Conventional Abbreviations for Service Names
 
-ダイアグラムのラベルには、公式フルネームではなく **慣例的に使われる短縮形** を優先する。長いフルネームをそのまま入れると水平方向が無駄に広がるため、改行（`elements.md` のラベル改行ルール）の前にまず「短くできないか」を検討する。
+For diagram labels, prefer **conventionally used abbreviations** over the official full name. Putting a long full name in as-is unnecessarily widens the diagram horizontally, so before resorting to a line break (see the label line-break rule in `elements.md`), first consider whether the name can be shortened.
 
-既知の短縮形:
+Known abbreviations:
 
-| 公式名 | ダイアグラム上のラベル |
+| Official name | Label on the diagram |
 |---|---|
 | SAP Destination service | `Destination` |
 
-**一般原則**:
-- 識別に不要な `service` / `Services` サフィックスは省略してよい（ただし `SAP Cloud Identity Services` のようにブランドの一部となっているものは残す）
-- 文脈で曖昧さが生じない場合は `SAP` プレフィックスも省略可（ただし `SAP HANA` のように他と区別する必要がある場合は残す）
-- 迷ったら残す側（正式名）を選び、水平方向を圧迫するときに短縮を検討する
+**General principles**:
+- Suffixes like `service` / `Services` that aren't needed for identification can be omitted (but keep them where they're part of the brand, such as `SAP Cloud Identity Services`)
+- The `SAP` prefix can also be omitted when there's no ambiguity in context (but keep it where it's needed to distinguish from something else, such as `SAP HANA`)
+- When in doubt, keep the full official name, and only consider abbreviating it when it's crowding the horizontal space
 
-新しい短縮形を採用した場合は、本テーブルに追記する。
-
----
-
-### 12. 外部から BTP への入口は左側に統一する
-
-外部システム（イベントブローカー、API クライアント、エンドユーザー、外部 IdP など BTP 外から BTP 内サービスへ入ってくる要素）は、**BTP コンテナの左側にまとめて配置**する。複数の入口がある場合は **左側に縦スタック**し、それぞれの矢印を右方向（BTP 内へ）に向ける。
-
-- **理由**: 入口が上下左右に散ると「どこからシステムに入ってくるのか」が一目で読めなくなる。左→右の流れに揃えると、データの起点が視覚的に明確になる
-- **例**: `Solace（イベント源）` を上、`API Client（質問の入口）` をその下に縦並びで配置し、両方から BTP 内サービスへ右向き矢印を出す
-- End User + Application Clients のセット（§4）も、この「左側入口」原則の一適用形
-
-### 13. BTP コンテナの上には要素を置かない
-
-BTP コンテナの **上辺より上には原則として要素を置かない**。BTP 外の外部サービス（OpenAI などの外部 API、非SAP システム）は、BTP の **左・右・下** のいずれかに配置する。
-
-- **理由**: BTP の上に物を置くと、BTP 内サービスから上向きの矢印が必要になり、SAP サービスアイコンの下ラベルを貫きやすい（§10）。また図全体の重心が崩れ、入口（左）→処理（BTP内）→外部連携（下）という読み筋が作りにくくなる
-- **配置の目安**: 外部の入口系は左（§12）、BTP 内サービスが従属的に呼び出す外部 API（LLM など）は下に置くと、BTP からの矢印が下向き（ボックス型サービスの下辺から）で素直に出せる
-- **例外**: どうしても上に置く場合は、BTP 内側の接続元をボックス型サービス（下ラベルを持たないもの）にして上向き矢印がラベルを貫かないようにする
-
-### 14. コンテナ帰属（BTP 内 / Subaccount 内 / 外）は Mermaid 段階で確定する
-
-各要素が **どのコンテナに属するか**（① BTP の外 / ② BTP 内・Subaccount 外 / ③ Subaccount 内）を、**Mermaid（論理構造）の段階で確定させる**。draw.io の座標を書き始めてから「やっぱり中だった」と気付くと、コンテナ幅・余白・主軸位置の再計算が芋づる式に発生する。
-
-- **Mermaid でネストした subgraph で帰属を明示する**（`subgraph BTP` の中に `subgraph SUB["Subaccount"]` を置き、各ノードを正しい階層に入れる）。帰属が曖昧なノードは、Mermaid レビュー時にユーザーへ確認する
-- **サービスの帰属はプロビジョニング単位で決める**。「リクエスト経路のどこに現れるか」ではなく「どのスコープでエンタイトル／設定するサービスか」で判断する
-  - 例: **SAP Custom Domain サービスはサブアカウント単位**で設定するため、リクエスト経路上は Approuter の手前でも、図では **Subaccount 内** に置く（BTP 直下・Subaccount 外に置くのは誤り）
-  - 例: XSUAA・Destination・HTML5 App Repo・API Management（Integration Suite）等もサブアカウントのサービス → Subaccount 内
-- **判断に迷う要素は Mermaid 段階で棚卸しし、帰属を1つずつ確定してから 4a へ進む**
-
-> 失敗例（2026 external-ui）: Custom Domain を当初 BTP 直下（Subaccount 外）に置いたが、実際はサブアカウントのサービスだった。Subaccount 内へ移す修正で主フローの X 座標・Subaccount 幅・BTP 左右余白まで再計算が発生した。Mermaid 段階で帰属を確定していれば一度で済んだ。
+If you adopt a new abbreviation, add it to this table.
 
 ---
 
-## Step 4: draw.io XML 生成（3 パス構成）
+### 12. Standardize External Entry Points Into BTP on the Left Side
 
-> **必須**: 4a に入る前に、`references/layout.md`、`references/elements.md`、`references/coordinate-passes.md` を **必ず Read する**。記憶 / 推測で書くと、過去の iteration で更新されたサイズ・座標規則・SAPIcon 名が反映されない。判断に迷ったら `references/guidelines.md` も参照。
+External systems (event brokers, API clients, end users, external IdPs — anything coming from outside BTP into a service inside BTP) should be **grouped together on the left side of the BTP container**. If there are multiple entry points, **stack them vertically on the left**, with each arrow pointing rightward (into BTP).
 
-Conventions はステップ2-3 で既に適用済み。ここでは draw.io 固有の実装（px サイズ・座標・エッジ接続点・スタイル値）に集中する。
+- **Reason**: if entry points are scattered on all sides, it's no longer obvious at a glance "where does this enter the system." Aligning them in a left-to-right flow makes the origin of the data visually clear
+- **Example**: place `Solace (event source)` on top and `API Client (question entry point)` below it, stacked vertically, with both sending rightward arrows into services inside BTP
+- The End User + Application Clients pairing (§4) is also one application of this "entry on the left" principle
 
-### 3 パス概要
+### 13. Don't Place Elements Above the BTP Container
 
-| パス | 役割 | 書くもの |
+As a rule, **don't place anything above the top edge of the BTP container**. External services outside BTP (external APIs such as OpenAI, non-SAP systems) should be placed to the **left, right, or below** BTP.
+
+- **Reason**: placing things above BTP would require upward-pointing arrows from services inside BTP, which tend to pierce the SAP service icon's label below it (§10). It also throws off the visual balance of the whole diagram, making it harder to establish a reading flow of entry (left) → processing (inside BTP) → external integration (below)
+- **Placement guide**: put entry-point-style externals on the left (§12), and external APIs called dependently by services inside BTP (e.g., an LLM) below — that way arrows from BTP can point naturally downward (from the bottom edge of a box-type service)
+- **Exception**: if you truly must place something above, use a box-type service (one without a bottom label) as the connection point inside BTP, so the upward arrow doesn't pierce a label
+
+### 14. Decide Container Membership (Inside BTP / Inside Subaccount / Outside) at the Mermaid Stage
+
+Decide **which container each element belongs to** (① outside BTP / ② inside BTP but outside the Subaccount / ③ inside the Subaccount) **at the Mermaid (logical structure) stage**. If you realize "actually it belongs inside" only after you've started writing draw.io coordinates, it triggers a cascade of recalculating container widths, margins, and main-axis positions.
+
+- **Make membership explicit with nested subgraphs in Mermaid** (place `subgraph SUB["Subaccount"]` inside `subgraph BTP`, and put each node at the correct level). If a node's membership is ambiguous, confirm it with the user during the Mermaid review
+- **Decide a service's membership based on its provisioning scope**, not "where it appears in the request path." Judge it by "at what scope is this service entitled/configured," not by request routing
+  - Example: **SAP Custom Domain service is configured at the subaccount level**, so even though it sits in front of the Approuter in the request path, on the diagram it goes **inside the Subaccount** (placing it directly under BTP, outside the Subaccount, would be wrong)
+  - Example: XSUAA, Destination, HTML5 App Repo, API Management (Integration Suite), etc. are also subaccount-level services → inside the Subaccount
+  - **For elements you're unsure about, do an inventory pass at the Mermaid stage and settle membership one by one before moving to 4a**
+
+> Failure example (2026 external-ui): Custom Domain was initially placed directly under BTP (outside the Subaccount), but it was actually a subaccount-level service. Moving it inside the Subaccount required recalculating the main flow's X coordinate, the Subaccount width, and the BTP left/right margins. Settling membership at the Mermaid stage would have avoided all of that rework.
+
+---
+
+## Step 4: Generate draw.io XML (3-Pass Structure)
+
+> **Required**: before entering 4a, you **must Read** `references/layout.md`, `references/elements.md`, and `references/coordinate-passes.md`. Writing from memory or guesswork risks missing size, coordinate, and SAPIcon-name rules that were updated in earlier iterations. If in doubt, also check `references/guidelines.md`.
+
+Conventions were already applied in steps 2-3. Here, focus on draw.io-specific implementation (px sizes, coordinates, edge connection points, style values).
+
+### The 3 Passes at a Glance
+
+| Pass | Role | What it produces |
 |---|---|---|
-| **4a 棚卸し** | 構造ミスの早期発見 | 座標なしのセル一覧（ID / 種別 / 親子 / エッジ） |
-| **4b-1 論理座標** | 修正に強い位置定義 | 主軸変数 + 相対式（`BWZ.x = SUB_LEFT + 35` 等） |
-| **4b-2 物理座標** | px 値を確定して XML 出力 | 変数評価結果 + `<mxCell>` |
+| **4a Inventory** | Catch structural mistakes early | A coordinate-free list of cells (ID / type / parent-child / edges) |
+| **4b-1 Logical coordinates** | A position definition resilient to changes | Main-axis variables + relative formulas (e.g., `BWZ.x = SUB_LEFT + 35`) |
+| **4b-2 Physical coordinates** | Fix px values and emit XML | Evaluated variable results + `<mxCell>` |
 
-各パスの手順・主軸変数の典型例・式の書き方・修正ループのルールは [`references/coordinate-passes.md`](references/coordinate-passes.md) に集約。Step 4 を実行する前に必ず読む。
+The procedure for each pass, typical examples of main-axis variables, how to write the formulas, and the rules for the fix loop are all gathered in [`references/coordinate-passes.md`](references/coordinate-passes.md). Always read it before executing Step 4.
 
-### Step 4 事前準備（スタイル未定義の洗い出し）
+### Step 4 Preparation (Identify Undefined Styles)
 
-3 パスに入る前に、以下を一度だけ済ませる。
+Before entering the 3 passes, do the following once.
 
-1. **必要要素の棚卸し**: その図で使うサービスアイコン名・ボックス種別・新規のレイアウトパターンを列挙する
-2. **references に存在するか確認**: `references/elements.md` の SAPIcon 表、`references/layout.md` の標準サイズ表、`references/guidelines.md` を突き合わせる
-3. **不明点を一括でユーザーに確認**: 不明な SAPIcon 名や未定義パターンを **全部まとめて** 聞く（遭遇するたびに聞くと会話が細切れになる）
-
----
-
-## 不明なスタイル・アイコンに遭遇したとき
-
-`references/` に定義されていない要素（未登録の `SAPIcon` 名、新種の矩形、初めて使う色 / 線種 など）に遭遇したら、**推測で描かずユーザーに確認する**。確認の粒度:
-
-- **SAP サービスアイコン**: `SAPIcon=...` の正式名が不明なときは、シェイプ名を推測せずユーザーに聞く（誤った名前だと draw.io 側で空表示になる）
-- **スタイル仕様**: 色・角丸・線種・フォント等で実装層に定義がない要素は、`references/guidelines.md` に該当セクションがあればそれを引用し、無ければユーザーに確認する
-- **レイアウト判断**: 新しい配置パターン（スタックコンテナ、interface 記号など）は勝手に採用しない
-
-確認の結果、**再利用可能なルールだと判断したら適切なファイルに追記** する:
-
-- **構成パターン・配置ルール** → この SKILL.md の Conventions 節
-- **draw.io スタイル・サイズ** → `references/layout.md` または `references/elements.md`
-
-公式由来のルールなら `references/guidelines.md` の該当セクションへの相互リンクも一緒に足す。これにより references が使用と共に育っていき、次回以降は再質問が不要になる。
+1. **Inventory the elements you need**: list out the service icon names, box types, and any new layout patterns this diagram will use
+2. **Check whether they already exist in references**: cross-check against the SAPIcon table in `references/elements.md`, the standard size table in `references/layout.md`, and `references/guidelines.md`
+3. **Batch up unknowns for the user**: ask about unknown SAPIcon names or undefined patterns **all at once** (asking one at a time as you encounter them fragments the conversation)
 
 ---
 
-## Claude / 人間の分担
+## When You Encounter an Unfamiliar Style or Icon
 
-| 内容 | 担当 |
+If you encounter an element not defined in `references/` (an unregistered `SAPIcon` name, a new kind of rectangle, a color/line type used for the first time, etc.), **don't guess — check with the user**. Granularity of confirmation:
+
+- **SAP service icons**: if the official `SAPIcon=...` name is unknown, ask the user rather than guessing the shape name (a wrong name renders as blank in draw.io)
+- **Style specs**: for elements with no definition at the implementation layer (color, corner radius, line type, font, etc.), quote the relevant section of `references/guidelines.md` if one exists, otherwise ask the user
+- **Layout decisions**: don't adopt a new placement pattern on your own (stacked containers, interface symbols, etc.)
+
+Once confirmed, if you judge the result to be **a reusable rule, add it to the appropriate file**:
+
+- **Composition patterns / placement rules** → the Conventions section of this SKILL.md
+- **draw.io styles / sizes** → `references/layout.md` or `references/elements.md`
+
+If the rule originates from the official guidelines, also add a cross-link to the relevant section of `references/guidelines.md`. This lets `references/` grow along with usage, so future sessions won't need to ask again.
+
+---
+
+## Division of Labor Between Claude and the Human
+
+| Item | Who's responsible |
 |---|---|
-| SAP サービスアイコン（`mxgraph.sap.icon`）の配置 | **Claude** |
-| Generic Icon（`shape=image` + base64 SVG）の配置 | **人間**（Claude は空プレースホルダを置くだけ。サイズは `references/layout.md` 参照） |
-| コンテナ・線・テキスト・スタイル全般 | **Claude** |
+| Placing SAP service icons (`mxgraph.sap.icon`) | **Claude** |
+| Placing Generic Icons (`shape=image` + base64 SVG) | **The human** (Claude only places an empty placeholder; see `references/layout.md` for sizes) |
+| Containers, lines, text, styling in general | **Claude** |
 
-**なぜ Generic Icon のみ人間担当か**: base64 エンコードされた SVG を 1 アイコンあたり数 KB、style 属性に埋め込む必要があり、Claude が XML 内で扱うとトークン消費・応答時間が膨れ上がる。SAP サービスアイコンは `SAPIcon=<名前>` の短い識別子で済むため問題ない。
+**Why only Generic Icons are the human's job**: a base64-encoded SVG runs several KB per icon and has to be embedded in the `style` attribute, which blows up token usage and response time if Claude handles it in XML. SAP service icons are fine because they only need a short `SAPIcon=<name>` identifier.
 
-会話の冒頭で「Generic Icon は人間が後から配置するので、SAP サービスアイコンのみ XML に記述してください」と伝えておくと誤解がない。
+Stating up front, at the start of the conversation, "Generic Icons will be placed by the human afterward, so please only write the SAP service icons into the XML" avoids misunderstandings.
 
-### 指示の Tips
+### Instruction Tips
 
-- **アイコンを触らないでほしい時**: 「アイコンの差し替えはこちらで行うので、それ以外の修正のみ適用してください」
-- **埋め込みラベルのスタイルだけ変えたい時**: 「コンテナ埋め込みの状態で、文字のスタイルのみ変更することはできませんか？」（別セル化を防ぐ）
-- **新しいルールを永続化したい時**: 「`references/layout.md`（または `elements.md`）に追加してください」と明示的に指示する
+- **When you don't want icons touched**: "I'll handle swapping out the icons myself, so please only apply the other changes."
+- **When you only want to change the style of an embedded label**: "Can you change just the text style while keeping it embedded in the container?" (this prevents it from being turned into a separate cell)
+- **When you want to persist a new rule**: explicitly say, "Please add this to `references/layout.md`" (or `elements.md`)
 
 ---
 
-## Step 4.5: 構造レビュー（自動実行）
+## Step 4.5: Structural Review (Runs Automatically)
 
-ステップ4 で `diagram.drawio` を生成した直後、Claude は **sap-diagram-review スキル（Phase 1: 構造レビュー）** を自動実行する。Conventions と `references/` の現在のルールに照らして XML をチェックし、問題があれば報告する。問題がなければ「レビュー OK」と表示してステップ5 に進む。
+Right after generating `diagram.drawio` in step 4, Claude **automatically runs the sap-diagram-review skill (Phase 1: structural review)**. It checks the XML against the Conventions and the current rules in `references/`, and reports any problems it finds. If there are none, it displays "Review OK" and moves on to step 5.
 
-## Step 5: draw.io に貼り付け + スクリーンショット共有
+## Step 5: Paste Into draw.io + Share a Screenshot
 
-生成された `diagram.drawio` の内容を draw.io にペーストし、**スクリーンショットを会話に貼り付ける**。
+Paste the contents of the generated `diagram.drawio` into draw.io, and **attach a screenshot to the conversation**.
 
-## Step 5.5: ビジュアルレビュー（自動実行）
+## Step 5.5: Visual Review (Runs Automatically)
 
-人間が共有したスクリーンショットを元に、Claude は **sap-diagram-review スキル（Phase 2: ビジュアルレビュー）** を実行する。ラベルのはみ出し・重なり、コンテナ余白、矢印の直線性などを画像から確認し、問題があれば修正案とともに報告する。問題がなければ「ビジュアルレビュー OK」と表示する。
+Based on the screenshot the human shared, Claude runs the **sap-diagram-review skill (Phase 2: visual review)**. It checks the image for label overflow/overlap, container margins, arrow straightness, and so on, and reports any problems along with suggested fixes. If there are none, it displays "Visual review OK."
 
-問題があれば言葉で修正指示に戻る。
+If there are problems, go back to giving correction instructions in words.
 
 ---
 
 ## References
 
-| ファイル | 役割 | 読むタイミング |
+| File | Role | When to read it |
 |---|---|---|
-| この SKILL.md（Conventions 節） | 設計規約（構成パターン・ラベル・言語） | **ステップ2-3**（Mermaid） |
-| `references/layout.md` | draw.io 実装詳細（px サイズ・座標・エッジ接続点） | **ステップ4**（draw.io XML） |
-| `references/elements.md` | draw.io 要素スタイル定義（BTP, ロゴ, アイコン, 線） | **ステップ4**（draw.io XML） |
-| `references/guidelines.md` | SAP 公式ガイドラインの日本語要約（source of truth） | 判断に迷ったとき |
+| This SKILL.md (Conventions section) | Design conventions (composition patterns, labels, language) | **Steps 2-3** (Mermaid) |
+| `references/layout.md` | draw.io implementation details (px sizes, coordinates, edge connection points) | **Step 4** (draw.io XML) |
+| `references/elements.md` | draw.io element style definitions (BTP, logos, icons, lines) | **Step 4** (draw.io XML) |
+| `references/guidelines.md` | English summary of the official SAP guidelines (source of truth) | Whenever you're unsure |
 
-Step 4 に入る前に、`references/layout.md` と `references/elements.md` は **必ず Read する**。読まずに記憶や推測で XML を書くと、スタイル値や座標規則が古いまま反映されるリスクがある。
+Before entering Step 4, you **must Read** `references/layout.md` and `references/elements.md`. Writing XML from memory or guesswork risks applying stale style values or coordinate rules.
 
 ---
 
 ## Common Pitfalls
 
-| 失敗 | 原因 | 対策 |
+| Failure | Cause | Countermeasure |
 |---|---|---|
-| ステップ2 で Mermaid にスタイル情報を入れてしまう | 論理構造と見た目を同時に決めようとした | Mermaid は論理構造のみ、スタイルはステップ4 で |
-| ボックスサイズ変更のたびに座標計算をやり直す | 棚卸しと座標計算を同時にやった | ステップ4 を 4a（棚卸し）/ 4b（座標計算）に分ける |
-| Claude が独自判断でスタイルを変えてしまう | `references/` 参照を明示しなかった | ステップ4 の冒頭で「`references/` のルールに従って」と明示する |
-| ラベルが別セルで作られてしまう | Claude が「スタイル変更 = 新規セル作成」と解釈 | 「コンテナ埋め込みのまま文字スタイルだけ変えて」と指示 |
-| Claude が Generic Icon の base64 を触ってしまう | 役割分担を伝えていない | ステップ4 の冒頭で「Generic Icon は人間が配置する」と明示 |
-| Claude が新しく決めたルールを忘れる | 会話内だけで合意して永続化しなかった | 「`references/layout.md`（または `elements.md`）に追加してください」と指示する |
-| アイコン名の確認で会話が細切れになる | XML 生成中に未登録アイコンに遭遇するたびユーザーに聞いた | ステップ4 冒頭で必要アイコンを列挙し、未登録分を **一括で** 確認する |
-| Claude が座標計算に時間をかけすぎる | ピクセル単位で完璧に合わせようとした | 最終調整は人間の仕事。Claude は直線矢印の両端と所属関係だけ厳密にし、他は粗で出す |
+| Style information gets put into Mermaid during step 2 | Tried to decide logical structure and appearance at the same time | Mermaid is for logical structure only; style comes in step 4 |
+| Redoing coordinate calculations every time a box size changes | Did the inventory and the coordinate calculations at the same time | Split step 4 into 4a (inventory) / 4b (coordinate calculation) |
+| Claude changes styles on its own judgment | Didn't explicitly reference `references/` | State explicitly at the start of step 4: "follow the rules in `references/`" |
+| A label ends up created as a separate cell | Claude interpreted "change the style" as "create a new cell" | Instruct: "keep it embedded in the container, just change the text style" |
+| Claude touches the Generic Icon's base64 data | The division of labor wasn't communicated | State explicitly at the start of step 4: "the human will place the Generic Icons" |
+| Claude forgets a rule it just decided on | It was agreed only in conversation, and never persisted | Instruct: "please add this to `references/layout.md`" (or `elements.md`) |
+| The conversation gets fragmented confirming icon names | The user was asked about each unregistered icon as it was hit during XML generation | List the icons needed at the start of step 4, and confirm any unregistered ones **all at once** |
+| Claude spends too much time on coordinate calculations | Tried to get pixel-perfect alignment | Final adjustments are the human's job. Claude should only be strict about the two endpoints of a straight arrow and membership relationships — everything else can come out rough |

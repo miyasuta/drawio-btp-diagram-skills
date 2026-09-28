@@ -7,133 +7,133 @@ description: Use after generating or editing a draw.io diagram of SAP BTP archit
 
 ## Overview
 
-draw.io XML のレビューを **2 フェーズ** で行う。
+Reviews draw.io XML in **two phases**.
 
-1. **構造レビュー（Step 4.5）**: XML 生成直後に自動実行。ドキュメントに照らして構造・スタイルをチェック
-2. **ビジュアルレビュー（Step 5.5）**: 人間が draw.io に貼り付けた後、スクリーンショットで見た目を確認
+1. **Structural review (Step 4.5)**: runs automatically right after XML generation. Checks structure and style against the documentation
+2. **Visual review (Step 5.5)**: after the human pastes it into draw.io, checks the appearance via a screenshot
 
 ## When to Use
 
-- **Step 4.5**: XML 生成完了直後に自動実行する
-- **Step 5.5**: 人間がスクリーンショットを提供したときに自動実行する
-- 人間が明示的に「レビューして」と言った場合にも実行可能
+- **Step 4.5**: runs automatically right after XML generation completes
+- **Step 5.5**: runs automatically when the human provides a screenshot
+- Can also run when the human explicitly says "review this"
 
-### 再実行が必要なケース（MUST）
+### Cases Requiring Re-Review (MUST)
 
-既存の `diagram.drawio` に対して以下の変更を加えた後は、**構造レビュー（Phase 1）を必ず再実行する**:
+After making any of the following changes to an existing `diagram.drawio`, **you must re-run the structural review (Phase 1)**:
 
-- 要素の**追加・削除**（アイコン、ボックス、エッジ等）
-- 要素の**移動**（コンテナを跨ぐ、または位置関係が大きく変わる — 例: 上 → 下）
-- コンテナの**サイズ変更**（幅・高さ）
-- 主フローの**中心軸**（Y または X）の変更
+- **Adding or removing** an element (icon, box, edge, etc.)
+- **Moving** an element (across containers, or a significant change in position — e.g., top → bottom)
+- **Resizing** a container (width / height)
+- Changing the main flow's **center axis** (Y or X)
 
-**理由**: 要素の位置やサイズが変わると、コンテナの余白・同レベルボックスのサイズ統一・座標整合などの検算結果が連動して変わる。差分が小さく見えても、関連する余白計算が全体で崩れる可能性があるため、全カテゴリを通した再評価が必要。
+**Reason**: when an element's position or size changes, the results of dependent checks — container margins, sizing consistency across sibling boxes, coordinate alignment — change along with it. Even if the diff looks small, the related margin calculations can break across the whole diagram, so a full re-evaluation across all categories is needed.
 
-**過去の失敗例**: HTML5 App Repo / XSUAA をコンテナ上段から下段へ移動した際、主フローの Y 座標はそのまま据え置いたため、Subaccount 内の上部に 100 px 超の空白が発生した。このとき再レビューを走らせていれば、`layout.md §2`「無駄な余白を作らない」「縦横両方向で、不要な余白がないか確認」のチェックで即座に検出できた。
+**Past failure example**: when HTML5 App Repo / XSUAA were moved from the top row of a container to the bottom row, the main flow's Y coordinate was left unchanged, leaving over 100 px of empty space at the top of the Subaccount. Running the re-review at that point would have caught it immediately via the `layout.md §2` check, "avoid wasted space" / "check for unneeded margins in both directions."
 
 ---
 
-## Phase 1: 構造レビュー（Step 4.5）
+## Phase 1: Structural Review (Step 4.5)
 
 ### Process
 
-1. 対象の `diagram.drawio` を読む
-2. 対応する `diagram.md`（Mermaid）を読む
-3. 以下のドキュメントを読み、現在のルールを取得する:
-   - `drawio-sap-diagrams` スキルの Conventions 節
+1. Read the target `diagram.drawio`
+2. Read the corresponding `diagram.md` (Mermaid)
+3. Read the following documents to get the current rules:
+   - The Conventions section of the `drawio-sap-diagrams` skill
    - `../drawio-sap-diagrams/references/layout.md`
    - `../drawio-sap-diagrams/references/elements.md`
-4. カテゴリごとにチェックし、問題を収集する
-5. 問題があれば一覧で報告、なければ「レビュー OK」
+4. Check each category and collect any problems
+5. Report a list of problems if any are found; otherwise report "Review OK"
 
 ### Review Categories
 
-各カテゴリはドキュメント参照で判定する。固定チェックリストではなく、**ドキュメントの現在の内容** がルールになる。
+Each category is judged by referencing the documentation. Rather than a fixed checklist, **the current content of the documentation** is the rule.
 
-| カテゴリ | 参照先 | チェック観点 |
+| Category | Reference | What to check |
 |---|---|---|
-| 構成パターン | `drawio-sap-diagrams` Conventions | End User+AC セット配置、CIS 配置位置、オンプレ接続 3 点セット、サービスボックスからの矢印集約 |
-| ラベル・言語 | `drawio-sap-diagrams` Conventions | 要素名が英語か、矢印ラベルが許可リスト内か |
-| コンテナの塗り | `../drawio-sap-diagrams/references/elements.md` | L0-L3 の交互ルール（#EBF8FF / #ffffff）に従っているか |
-| アイコン形式 | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | SAP アイコンのサイズ・`html=1;`の有無、Generic Icon がプレースホルダ形式か（既知アスペクト比の適用含む）、ラベルが別セルか |
-| ラベル改行 | `../drawio-sap-diagrams/references/elements.md` | 3 単語以上のラベルが改行されているか（SAP サービスアイコン: `&#10;` / サービスボックスのタイトル: `<br>`）。未改行だと水平間隔が無駄に広がる |
-| ラベル位置 | `../drawio-sap-diagrams/references/elements.md`（ラベル位置の変種）+ `SKILL.md §10` | SAP サービスアイコンのラベルが**デフォルトの下**（`verticalLabelPosition=bottom`）で統一されているか。`top` に切り替えたアイコンがあれば、それが §10 の例外条件（下辺進入を避けられない等）を**本当に満たすか**を検証する。満たさない／代替手段（下ラベルのまま矢印をラベル下から出す・接続元を動かす等）がある場合は **🚩問題として報告**し、「意図的な逸脱（修正不要）」で素通りさせない。図内でラベル位置が上下混在していたら原則フラグ |
-| エッジ進入 | `../drawio-sap-diagrams/references/layout.md` §1b | ボックスへの「L字進入」（横から来て下辺/上辺に刺す等、対向しない辺への直角進入）が無いか。あれば直線化（接続元の位置調整・同じ辺の異なる位置への複数直線）を提案する |
-| Line jump | `../drawio-sap-diagrams/references/elements.md`（線/エッジ） | 全エッジのスタイルに `jumpStyle=gap;jumpSize=8;`（交差部の隙間）が入っているか。抜けているエッジがあれば追加を提案する |
-| コンテナサイズ | `../drawio-sap-diagrams/references/layout.md` | ラベル付きコンテナの上部余白（テキストラベル: 50〜60px）、SAP アイコンのラベルはみ出し分を含めた下部・側面余白、子要素が 1 つの場合の中心揃え、同レベルのボックスの**サイズと整列**の統一（横並びなら高さ + 上端 Y、縦並びなら幅 + 左端 X。右端/下端だけ一致して反対側の端がずれていないか座標で確認） |
-| コンテナ余白（左右対称） | `../drawio-sap-diagrams/references/layout.md` §2 | **入れ子コンテナ（BTP の中の Subaccount 等）の左右余白が等しいか座標で検算する**。`内側.x − 外側.x`（左余白）と `外側.right − 内側.right`（右余白）を計算し、差があれば 🚩報告。各余白が 30〜55px の範囲内かも確認。下方向に別コンテナ（CIS 等）をぶら下げる場合の上下非対称は許容するが、**左右は必ず対称**。要素移動やコンテナ幅変更のたびにこの検算を行う |
-| タイトルはみ出し | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | サービスボックスのタイトルテキストセル幅がタイトル文字列に対して十分か（fontSize=12 の太字で 1 文字あたり約 8px を目安に推定） |
-| 座標整合 | `../drawio-sap-diagrams/references/layout.md` | 直線矢印で結ぶ要素の中心座標が一致しているか |
-| エッジ接続点 | `../drawio-sap-diagrams/references/layout.md` | trust / authenticate 等の重要エッジで entryX/Y, exitX/Y が明示されているか |
-| 必須要素 | `diagram.md` との突合 | Mermaid に定義された全ノード・エッジが XML に存在するか |
+| Composition patterns | `drawio-sap-diagrams` Conventions | End User+AC pairing, CIS placement, the on-premise connection 3-piece set, consolidating arrows from a service box |
+| Labels / language | `drawio-sap-diagrams` Conventions | Whether element names are in English, whether arrow labels are on the allowed list |
+| Container fill | `../drawio-sap-diagrams/references/elements.md` | Whether the L0-L3 alternating rule (#EBF8FF / #ffffff) is followed |
+| Icon format | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | SAP icon size, presence of `html=1;`, whether Generic Icons use the placeholder format (including applying known aspect ratios), whether the label is a separate cell |
+| Label line breaks | `../drawio-sap-diagrams/references/elements.md` | Whether labels of 3 or more words are broken (SAP service icon: `&#10;` / service box title: `<br>`). Not breaking wastes horizontal space |
+| Label position | `../drawio-sap-diagrams/references/elements.md` (Label Position Variants) + `SKILL.md §10` | Whether SAP service icon labels are consistently at the **default bottom** (`verticalLabelPosition=bottom`). If any icon is switched to `top`, verify whether it **truly** meets the exception conditions in §10 (unable to avoid entering the bottom edge, etc.). If it doesn't meet them, or there's an alternative (keep the bottom label and route the arrow out below the label, or move the source), **flag it 🚩** — don't wave it through as "an intentional deviation, no fix needed." As a rule, flag any diagram where label positions are mixed top/bottom |
+| Edge approach | `../drawio-sap-diagrams/references/layout.md` §1b | Whether there's any "L-shaped approach" into a box (entering a non-facing edge, such as coming from the side and piercing the bottom/top edge). If so, suggest straightening it (adjusting the source position, or multiple straight lines into different points on the same edge) |
+| Line jump | `../drawio-sap-diagrams/references/elements.md` (Lines/Edges) | Whether every edge's style includes `jumpStyle=gap;jumpSize=8;` (a gap at crossings). Suggest adding it to any edge missing it |
+| Container size | `../drawio-sap-diagrams/references/layout.md` | Top margin for a labeled container (text label: 50–60px), bottom/side margins including SAP icon label overflow, centering when there's a single child element, unifying **size and alignment** across sibling boxes at the same level (height + top Y for horizontal arrangement, width + left X for vertical; check by coordinates whether only the right/bottom edge matches while the opposite edge is misaligned) |
+| Container margins (left/right symmetry) | `../drawio-sap-diagrams/references/layout.md` §2 | **Verify by coordinates that the left/right margins of nested containers (e.g., Subaccount within BTP) are equal.** Compute `inner.x − outer.x` (left margin) and `outer.right − inner.right` (right margin); flag 🚩 if they differ. Also check each margin falls within 30–55px. Top/bottom asymmetry is acceptable when another container (e.g. CIS) hangs below, but **left/right must always be symmetric**. Redo this check whenever elements move or a container's width changes |
+| Title overflow | `../drawio-sap-diagrams/references/elements.md` + `layout.md` | Whether a service box's title text cell is wide enough for the title string (estimate roughly 8px per character for bold fontSize=12) |
+| Coordinate alignment | `../drawio-sap-diagrams/references/layout.md` | Whether the center coordinates of elements connected by a straight arrow match |
+| Edge connection points | `../drawio-sap-diagrams/references/layout.md` | Whether entryX/Y, exitX/Y are explicit on important edges such as trust / authenticate |
+| Required elements | Cross-check against `diagram.md` | Whether every node and edge defined in Mermaid exists in the XML |
 
 ### Output Format
 
-問題がある場合:
+If there are problems:
 
 ```
-## Diagram Review (構造)
+## Diagram Review (Structural)
 
-- [ ] **構成パターン**: Cloud Connector が S/4HANA の箱の外に配置されている（Conventions §8）
-- [ ] **座標整合**: SPA と DEST の中心 Y が 2px ずれている（layout.md §4）
+- [ ] **Composition pattern**: Cloud Connector is placed outside the S/4HANA box (Conventions §8)
+- [ ] **Coordinate alignment**: SPA and DEST centers are off by 2px on Y (layout.md §4)
 
-上記を修正しますか？
+Should I fix the above?
 ```
 
-問題がない場合:
+If there are no problems:
 
 ```
-## Diagram Review (構造)
+## Diagram Review (Structural)
 
-レビュー OK — draw.io に貼り付けてスクリーンショットを共有してください
+Review OK — please paste it into draw.io and share a screenshot
 ```
 
 ---
 
-## Phase 2: ビジュアルレビュー（Step 5.5）
+## Phase 2: Visual Review (Step 5.5)
 
 ### Trigger
 
-人間が draw.io に XML を貼り付けた後、**スクリーンショットを会話に貼り付ける** ことでトリガーされる。Claude は画像を Read で読み込み、以下の観点でチェックする。
+Triggered when the human **attaches a screenshot to the conversation** after pasting the XML into draw.io. Claude reads the image with Read and checks it from the following angles.
 
-### チェック観点
+### Checkpoints
 
-| カテゴリ | チェック内容 |
+| Category | What to check |
 |---|---|
-| ラベルはみ出し | SAP サービスアイコンのラベルがコンテナ枠からはみ出していないか |
-| タイトルはみ出し | サービスボックスのタイトル（アイコン横のテキスト）がボックス枠からはみ出していないか |
-| ラベル重なり | 隣接するアイコンのラベル同士が重なっていないか。下向き矢印とその発射元ラベルがくっつきすぎていないか（ラベル文字と線に隙間があるか → `layout.md §6`） |
-| ラベル位置の統一 | アイコンのラベルが下で統一されているか（一部だけ上になって上下混在していないか）。混在していれば §10 の例外妥当性を確認し、不要なら下に統一を提案 |
-| エッジとコンテナ枠 | コンテナ境界を跨ぐエッジの**折れ点・ラベルがコンテナ枠線に重なって**いないか（`layout.md §1c`）。重なっていれば外部ターゲットを離す／経由点で折れ点を枠外のクリア帯へ移すことを提案 |
-| エッジラベルの配置 | エッジラベルが**折れ点（コーナー）の上**に乗って線形状を隠していないか、**線から離れて浮き**所属不明になっていないか（`layout.md §1d`）。直線区間で線中央に乗せる／並走ラベルの高さ（Y）を揃えることを提案 |
-| ボックスサイズ・整列の統一 | 同レベルのサービスボックスが、横並びなら高さ + 上端、縦並びなら幅 + 左端が揃っているか（サイズが合っていても端がずれて不揃いに見えないか） |
-| コンテナ余白 | コンテナの上下左右に適切な余白があるか（詰まりすぎ・空きすぎ）。**入れ子コンテナの左右余白が目視で等しいか**（片側だけ広いと内側が寄って見える）。左右非対称なら左右対称化を提案 |
-| 矢印の直線性 | 直線であるべき矢印が折れ曲がっていないか。ボックスへの L字進入（横から来て下辺/上辺に刺す）が無いか |
-| 要素の視認性 | テキストが読める大きさか、アイコンが潰れていないか |
+| Label overflow | Whether an SAP service icon's label overflows the container border |
+| Title overflow | Whether a service box's title (the text next to the icon) overflows the box border |
+| Label overlap | Whether adjacent icons' labels overlap each other. Whether a downward arrow and the label it originates from are touching too closely (is there a gap between the label text and the line? → `layout.md §6`) |
+| Consistent label position | Whether icon labels are consistently on the bottom (is there a mix of some on top?). If mixed, check whether §10's exception conditions apply; if not, suggest unifying them to the bottom |
+| Edges vs. container borders | Whether an edge crossing a container boundary has its **bend point or label overlapping the container's border line** (`layout.md §1c`). If so, suggest moving the external target further away, or moving the bend point into a clear zone outside the border via a waypoint |
+| Edge label placement | Whether an edge label sits **on top of a bend point (corner)**, hiding the line's shape, or **floats away from the line**, making it unclear which edge it belongs to (`layout.md §1d`). Suggest placing it on a straight segment, centered on the line, and aligning the height (Y) of parallel labels |
+| Consistent box size/alignment | Whether sibling service boxes at the same level have matching height + top edge (horizontal arrangement) or width + left edge (vertical arrangement) — i.e., whether they look uneven even when sizes match, due to edge misalignment |
+| Container margins | Whether the container has appropriate margins on all sides (too tight / too loose). **Whether nested containers' left/right margins look equal** (if one side is wider, the inner container looks off-center). Suggest symmetrizing if left/right are asymmetric |
+| Arrow straightness | Whether an arrow that should be straight is bent. Whether there's an L-shaped approach into a box (entering from the side and piercing the bottom/top edge) |
+| Element visibility | Whether text is a readable size, whether icons look squashed |
 
 ### Process
 
-1. スクリーンショット画像を確認する
-2. 上記チェック観点で問題を洗い出す
-3. 問題があれば具体的な指摘と修正案を報告、なければ「ビジュアルレビュー OK」
+1. Review the screenshot image
+2. Identify any problems using the checkpoints above
+3. Report specific issues and suggested fixes if any are found; otherwise report "Visual review OK"
 
 ### Output Format
 
-問題がある場合:
+If there are problems:
 
 ```
-## Diagram Review (ビジュアル)
+## Diagram Review (Visual)
 
-- [ ] **ラベルはみ出し**: Cloud Connector のラベルが S4 ボックス下端からはみ出している → S4 の高さを拡張
-- [ ] **矢印の直線性**: trust 矢印が折れ曲がっている → Sub と CIS の中心 X がずれている
+- [ ] **Label overflow**: the Cloud Connector label overflows past the bottom of the S4 box → extend the height of S4
+- [ ] **Arrow straightness**: the trust arrow is bent → the center X of Sub and CIS don't match
 
-修正しますか？
+Should I fix these?
 ```
 
-問題がない場合:
+If there are no problems:
 
 ```
-## Diagram Review (ビジュアル)
+## Diagram Review (Visual)
 
-ビジュアルレビュー OK
+Visual review OK
 ```

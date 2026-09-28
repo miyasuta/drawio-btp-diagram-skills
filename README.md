@@ -1,44 +1,44 @@
 # drawio-btp-diagram-skills
 
-Claude Code / Claude Desktop 用の Skill バンドル。**言葉で伝えた設計を draw.io で描けるアーキテクチャ図に変換する** 協働ワークフローを提供します。
+A Skill bundle for Claude Code / Claude Desktop. It provides a collaborative workflow that **turns a design you describe in words into an architecture diagram drawn in draw.io**.
 
 ---
 
-## 概要 / 何ができるか
+## Overview / What It Does
 
-SAP BTP を題材にアーキテクチャ図を描くとき、draw.io で直接書くのは時間がかかり、公式ガイドライン（色・サイズ・配置）を正しく当てはめるのも面倒です。このスキルは:
+When you draw an architecture diagram for SAP BTP, writing it directly in draw.io takes time, and correctly applying the official guidelines (colors, sizes, placement) is tedious. This skill handles it with a three-step process, ordered so each stage is easy to review:
 
-1. 言葉で設計を伝える
-2. Claude が **Mermaid で論理構造** に起こす（`diagram.md`）
-3. 合意が取れたら Claude が **draw.io XML** を生成する（`diagram.drawio`）
-4. **構造レビュー**（XML のチェック）+ **ビジュアルレビュー**（スクショのチェック）が自動で走る
+1. You describe the design in words
+2. Claude turns it into **logical structure in Mermaid** (`diagram.md`)
+3. Once you agree on the structure, Claude generates the **draw.io XML** (`diagram.drawio`)
+4. A **structural review** (checking the XML) and a **visual review** (checking a screenshot) run automatically
 
-という 3 段論法で、レビューしやすい順に詰めていきます。draw.io XML を直接読むのはレビューがつらいので、Mermaid で論理を固めてから XML に落とすのがポイントです。
+Reading draw.io XML directly is hard to review, so the key idea is to nail down the logic in Mermaid first, then translate it into XML.
 
-### 含まれる 2 つのスキル
+### The Two Included Skills
 
-| スキル | 役割 |
+| Skill | Role |
 |---|---|
-| `drawio-sap-diagrams` | 5 ステップ協働ワークフロー（言葉 → Mermaid → XML） |
-| `sap-diagram-review` | 生成された XML / スクリーンショットの自動レビュー |
+| `drawio-sap-diagrams` | The 5-step collaborative workflow (words → Mermaid → XML) |
+| `sap-diagram-review` | Automatic review of the generated XML / screenshots |
 
-`sap-diagram-review` は独立トリガー（XML 生成完了 / スクショ共有）を持つため、他のワークフローからも単独で呼び出せます。
+`sap-diagram-review` has its own independent triggers (XML generation complete / screenshot shared), so it can also be called on its own from other workflows.
 
-### 対象ユーザー
+### Who This Is For
 
-- SAP BTP でアプリやソリューションを組み立てているアーキテクト・開発者
-- 公式 SAP ビジュアルガイドラインに沿った図を書きたい人
+- Architects and developers building apps or solutions on SAP BTP
+- Anyone who wants diagrams that follow the official SAP visual guidelines
 
 ---
 
 ## Getting Started
 
-### 前提
+### Prerequisites
 
-- Claude Code がインストール済み
-- `git` / `ln` が使える（macOS / Linux）
+- Claude Code installed
+- `git` / `ln` available (macOS / Linux)
 
-### 1. clone + symlink
+### 1. Clone + Symlink
 
 ```bash
 git clone https://github.com/<user>/drawio-btp-diagram-skills.git ~/projects/claude-drawio-skill/drawio-btp-diagram-skills
@@ -46,98 +46,98 @@ ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/drawio-sap
 ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/sap-diagram-review     ~/.claude/skills/sap-diagram-review
 ```
 
-symlink にしておくと `git pull` の結果が即反映されます（`cp -r` は更新漏れの原因になるため非推奨）。
+Using symlinks means `git pull` results take effect immediately (`cp -r` is not recommended, since it's easy to forget to update the copy).
 
-確認:
+To verify:
 
 ```bash
-ls -la ~/.claude/skills/drawio-sap-diagrams/        # symlink 解決
+ls -la ~/.claude/skills/drawio-sap-diagrams/        # confirm the symlink resolves
 ls ~/.claude/skills/drawio-sap-diagrams/references/ # layout / elements / guidelines
 ```
 
-### 2. Claude Code を再起動
+### 2. Restart Claude Code
 
-セッション開始時のスキル一覧に `drawio-sap-diagrams` と `sap-diagram-review` が並んでいれば準備完了。
+If `drawio-sap-diagrams` and `sap-diagram-review` both appear in the skill list at the start of a session, you're ready to go.
 
-### 3. 最初の 1 図を描く
+### 3. Draw Your First Diagram
 
-適当なプロジェクトで試してみてください:
+Try it out in any project:
 
 ```
-このプロジェクト（CAP + UI5）のアーキテクチャ図を描いてください。
-- UI は Work Zone からアクセスさせる
-- CAP は S/4HANA (Private Cloud) につながっている
+Please draw an architecture diagram for this project (CAP + UI5).
+- The UI should be accessed from Work Zone
+- CAP connects to S/4HANA (Private Cloud)
 ```
 
-Claude が不足情報を番号付きで聞き返してくるので、番号で返答すると Mermaid → draw.io XML の順に生成されます。XML を draw.io にペーストしてスクリーンショットを会話に貼ると、ビジュアルレビューも自動で走ります。
+Claude will ask numbered follow-up questions for any missing information; answer by number and it will generate a Mermaid diagram, then the draw.io XML. Paste the XML into draw.io, attach a screenshot to the conversation, and the visual review will run automatically too.
 
-詳しい流れや他のプロンプト例は次の [使い方](#使い方) を参照。
+See [Usage](#usage) below for the detailed flow and more example prompts.
 
 ---
 
-## 使い方
+## Usage
 
-### サンプルプロンプト（推奨: 曖昧な状態から始める）
+### Sample Prompt (Recommended: Start From an Ambiguous State)
 
-プロジェクトに実装がある場合、細かい構造は Claude がコードを読めば把握できるので、**高レベルの関係だけ** 伝えれば十分です:
-
-```
-このプロジェクト（CAP + UI5）のアーキテクチャ図を描いてください。
-- UI は Work Zone からアクセスさせる
-- CAP は S/4HANA (Private Cloud) につながっている
-```
-
-情報が足りないと Claude は **番号付きで聞き返してきます**。番号で簡潔に返答すれば、合意がとれたところから Mermaid → 棚卸し → draw.io XML の生成に進みます。
+If the project already has an implementation, Claude can read the code to work out the fine-grained structure, so you only need to give it **the high-level relationships**:
 
 ```
-1. はい / 2. CIS 経由、3rd-party なし / 3. はい / 4. 不要
+Please draw an architecture diagram for this project (CAP + UI5).
+- The UI should be accessed from Work Zone
+- CAP connects to S/4HANA (Private Cloud)
 ```
 
-何を聞き返してくるかは依頼内容と Claude のプロジェクト把握度次第です（上記はあくまで返答スタイルの例）。
+If information is missing, Claude will **ask numbered follow-up questions**. Answer them briefly by number, and once you agree on the structure it moves on to Mermaid → element inventory → draw.io XML generation.
+
+```
+1. Yes / 2. Via CIS, no 3rd-party / 3. Yes / 4. Not needed
+```
+
+What Claude asks depends on your request and how well it already understands the project (the example above is just meant to illustrate the reply style).
 
 
-### ワークフローの流れ
+### Workflow Overview
 
-プロンプトを送ると、スキルは以下の順に進みます:
+Once you send a prompt, the skill proceeds through the following steps:
 
-1. **Mermaid 生成** → `diagram.md` に論理構造を出力。Mermaid プレビューで確認し、違えば言葉で修正指示
-2. **要素棚卸し**（座標なしのセル一覧をテキストで提示）→ 構造ミスがあればここで修正
-3. **draw.io XML 生成** → `diagram.drawio`
-4. **構造レビュー**（`sap-diagram-review` が自動実行）
-5. draw.io に貼り付けて、スクリーンショットを会話に添付
-6. **ビジュアルレビュー**（`sap-diagram-review` が自動実行）
+1. **Generate Mermaid** → outputs the logical structure to `diagram.md`. Review it in the Mermaid preview and give correction instructions in words if needed
+2. **Element inventory** (a text list of cells without coordinates) → fix any structural mistakes here
+3. **Generate draw.io XML** → `diagram.drawio`
+4. **Structural review** (`sap-diagram-review` runs automatically)
+5. Paste it into draw.io and attach a screenshot to the conversation
+6. **Visual review** (`sap-diagram-review` runs automatically)
 
 ---
 
-## スキルの育て方
+## How the Skill Grows
 
-このスキルは **使いながら育つ** よう設計されています。出荷時の `references/` に載っていない要素や、自分の好み・運用ルールに気付いたとき、それを会話で伝えるだけで Claude が適切なファイルに永続化してくれます。
+This skill is designed to **grow as you use it**. When you notice an element that isn't yet in the shipped `references/`, or a preference or house rule of your own, just mention it in conversation and Claude will persist it to the right file.
 
-### 育て方の例
+### Examples of How It Grows
 
-| きっかけ | 永続化される場所 |
+| Trigger | Where it gets persisted |
 |---|---|
-| 未登録の SAP サービスアイコン名を確認した | `references/elements.md` の SAPIcon 表 |
-| 新しいスタイル・色・サイズ（公式に載っているがスキル側に未定義） | `references/elements.md` または `references/layout.md` |
-| 「このパターンは原則こう配置して欲しい」というレイアウト方針 | `SKILL.md` の Conventions 節 |
-| 「このサービス群はいつもセットで描く」という設計ルール | `SKILL.md` の Conventions 節 |
-| 「上向き矢印は避けたい」など、自分の図の好み | `SKILL.md` の Conventions 節 |
+| You confirmed the name of an SAP service icon that wasn't registered yet | The SAPIcon table in `references/elements.md` |
+| A new style, color, or size (documented officially but not yet defined in the skill) | `references/elements.md` or `references/layout.md` |
+| A layout policy like "this pattern should generally be arranged like this" | The Conventions section of `SKILL.md` |
+| A design rule like "these services are always drawn together" | The Conventions section of `SKILL.md` |
+| A personal diagram preference, such as "avoid upward-pointing arrows" | The Conventions section of `SKILL.md` |
 
-Claude 自身が「これは再利用できそう」と判断したときは追記を提案してくるので、承認すれば書き込まれます。明示的に指示するのもありです:
+When Claude itself judges that something "looks reusable," it will suggest adding it, and it gets written once you approve. You can also instruct it explicitly:
 
 ```
-このレイアウト方針は今後ずっと使いたいので、SKILL.md の Conventions に追記してください。
+I want to keep using this layout policy going forward, so please add it to the Conventions section of SKILL.md.
 ```
 
-### symlink 経由なので即反映
+### Changes Take Effect Immediately via Symlink
 
-symlink でインストールしているため、Claude が `references/` や `SKILL.md` を編集すると **リポジトリ本体のファイルが直接書き換わります**。次のセッションから新しいルールが効きます。
+Because the skill is installed via a symlink, when Claude edits `references/` or `SKILL.md`, **it directly rewrites the files in the repository itself**. The new rules take effect starting with the next session.
 
-### 自動コミット（強く推奨）
+### Auto-Commit (Strongly Recommended)
 
-skill リポが symlink されていると、**利用プロジェクト側のセッション** で更新が走っても、そのセッションで `git commit` はされません。放置すると未コミット変更が溜まります。
+Because the skill repo is symlinked, updates made during **a session in the consuming project** are not `git commit`ed by that session. Left unchecked, uncommitted changes will pile up.
 
-`~/.claude/settings.json` に Stop フックを仕込むと、**セッション終了時に** skill リポの未コミット変更を自動でコミットしてくれます:
+Setting up a Stop hook in `~/.claude/settings.json` will automatically commit any uncommitted changes in the skill repo **when a session ends**:
 
 ```json
 {
@@ -156,32 +156,32 @@ skill リポが symlink されていると、**利用プロジェクト側のセ
 }
 ```
 
-挙動:
+Behavior:
 
-- skill リポに未コミット変更がないセッション → 何もしない
-- 変更があるセッション → `Auto-update skills/drawio-sap-diagrams/references/elements.md (1 file changed, 1 insertion(+))` のような差分情報入りメッセージでコミット
-- 利用プロジェクト側のリポジトリには触れない（`git -C "$SKILL_REPO"` で scope 固定）
+- If a session has no uncommitted changes in the skill repo → does nothing
+- If a session has changes → commits with a message that includes diff info, like `Auto-update skills/drawio-sap-diagrams/references/elements.md (1 file changed, 1 insertion(+))`
+- Never touches the repository of the consuming project (scope is fixed via `git -C "$SKILL_REPO"`)
 
-設定を書いたら Claude Code を再起動するか、`/hooks` を一度開くと反映されます。
-
----
-
-## プロジェクトごとのカスタマイズ
-
-プロジェクト固有の出力先ルールは **各プロジェクトの `CLAUDE.md`** に書きます。スキル側にはプロジェクト固有パスを持たせません。
-
-### デフォルト
-
-CLAUDE.md に出力先を指定していない場合、スキルは以下をデフォルトとして提案します:
-
-```
-diagrams/diagram.md       # Mermaid（論理構造）
-diagrams/diagram.drawio   # draw.io XML（貼り付け用）
-```
+After adding the config, restart Claude Code, or open `/hooks` once, for it to take effect.
 
 ---
 
-## リポジトリ構成
+## Per-Project Customization
+
+Project-specific output path rules belong in **each project's `CLAUDE.md`**. The skill itself does not hold any project-specific paths.
+
+### Default
+
+If `CLAUDE.md` doesn't specify an output path, the skill suggests the following as the default:
+
+```
+diagrams/diagram.md       # Mermaid (logical structure)
+diagrams/diagram.drawio   # draw.io XML (for pasting)
+```
+
+---
+
+## Repository Structure
 
 ```
 drawio-btp-diagram-skills/
@@ -192,15 +192,15 @@ drawio-btp-diagram-skills/
     ├── drawio-sap-diagrams/
     │   ├── SKILL.md          # 5-step workflow + Conventions (inline)
     │   └── references/
-    │       ├── layout.md     # draw.io 実装詳細（px サイズ・座標・エッジ接続点）
-    │       ├── elements.md   # draw.io 要素スタイル定義（BTP, ロゴ, アイコン, 線）
-    │       └── guidelines.md # SAP 公式ガイドライン日本語要約（source of truth）
+    │       ├── layout.md     # draw.io implementation details (px sizes, coordinates, edge connection points)
+    │       ├── elements.md   # draw.io element style definitions (BTP, logos, icons, lines)
+    │       └── guidelines.md # English summary of SAP's official guidelines (source of truth)
     └── sap-diagram-review/
-        └── SKILL.md          # 構造レビュー + ビジュアルレビューの 2 フェーズ
+        └── SKILL.md          # The two phases: structural review + visual review
 ```
 
 ---
 
-## ライセンス
+## License
 
 [MIT](LICENSE)
