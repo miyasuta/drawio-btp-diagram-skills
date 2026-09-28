@@ -133,11 +133,11 @@ I want to keep using this layout policy going forward, so please add it to the C
 
 Because the skill is installed via a symlink, when Claude edits `references/` or `SKILL.md`, **it directly rewrites the files in the repository itself**. The new rules take effect starting with the next session.
 
-### Auto-Commit (Strongly Recommended)
+### Auto-Commit (Optional)
 
 Because the skill repo is symlinked, updates made during **a session in the consuming project** are not `git commit`ed by that session. Left unchecked, uncommitted changes will pile up.
 
-Setting up a Stop hook in `~/.claude/settings.json` will automatically commit any uncommitted changes in the skill repo **when a session ends**:
+If you'd rather not commit these changes by hand, you can optionally set up a Stop hook in `~/.claude/settings.json` to automatically commit any uncommitted changes in the skill repo **when a session ends**:
 
 ```json
 {
