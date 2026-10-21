@@ -327,6 +327,8 @@ When switching to a top label, ensure **at least 20 px of spacing** between it a
 | HTML5 Application Repository service | `HTML5_App_Repository` |
 | SAP Custom Domain service | `SAP_Custom_Domain_service` |
 | SAP Continuous Integration and Delivery | `SAP_Continuous_Integration_and_Delivery` |
+| SAP Alert Notification service for SAP BTP | `SAP_Alert_Notification_service_for_SAP_BTP` |
+| SAP Automation Pilot | `SAP_Automation_Pilot` |
 
 Icon names for other services can be looked up in draw.io's shape library.
 
