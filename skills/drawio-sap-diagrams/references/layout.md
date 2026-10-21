@@ -72,6 +72,7 @@ Once the internal elements of a Subaccount or BTP container are placed, size the
 - Top: 40 px (see below when there's a label)
 - Bottom: 40–55 px (if another container/icon (e.g. CIS) hangs below, the bottom can be wider accordingly. Top/bottom asymmetry is acceptable, but left/right must be symmetric)
 - Horizontal spacing between child elements: around 100 px (roughly 170 px from one icon's left edge to the next icon's left edge)
+- Vertical spacing between rows of child elements: **30–40 px from the bottom edge of the upper row's labels to the top edge of the lower row's icons** (base it on the label's bottom edge, not the icon's; 2-line labels extend 30–35 px below the icon). Looser than 40 px leaves wasted space; tighter than 30 px makes labels and the next row look crowded. Reference (2026 Dev/Target CI/CD diagram): row 1 icon center Y=120, row 2 icon center Y=240 (icon 50×50, 1-line label) → about 35 px gap. If an arrow runs vertically between the rows (e.g. a line from an upper-row element down to the lower row), leave enough room for it to be visible, and don't shrink below the lower bound
 
 > Failure example (2026 external-ui): when Custom Domain was moved inside the Subaccount and the main flow shifted right, the BTP container ended up with an asymmetric left margin of 140px / right margin of 35px, making the Subaccount look shifted to the right. Fixed by adjusting BTP.x and width to make both margins 45px. **As a rule, the outer container's left/right margins should be symmetric.**
 
