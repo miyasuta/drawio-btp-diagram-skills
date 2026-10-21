@@ -276,7 +276,7 @@ Before entering the 3 passes, do the following once.
 
 If you encounter an element not defined in `references/` (an unregistered `SAPIcon` name, a new kind of rectangle, a color/line type used for the first time, etc.), **don't guess — check with the user**. Granularity of confirmation:
 
-- **SAP service icons**: if the official `SAPIcon=...` name is unknown, ask the user rather than guessing the shape name (a wrong name renders as blank in draw.io)
+- **SAP service icons**: if the official `SAPIcon=...` name is unknown, **look it up first** following "Looking Up an Icon Name Not in the Table" in `references/elements.md`; ask the user only if that finds nothing. Don't guess the shape name (a wrong name renders as blank in draw.io)
 - **Style specs**: for elements with no definition at the implementation layer (color, corner radius, line type, font, etc.), quote the relevant section of `references/guidelines.md` if one exists, otherwise ask the user
 - **Layout decisions**: don't adopt a new placement pattern on your own (stacked containers, interface symbols, etc.)
 

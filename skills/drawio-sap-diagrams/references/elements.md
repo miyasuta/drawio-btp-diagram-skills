@@ -327,10 +327,21 @@ When switching to a top label, ensure **at least 20 px of spacing** between it a
 | HTML5 Application Repository service | `HTML5_App_Repository` |
 | SAP Custom Domain service | `SAP_Custom_Domain_service` |
 | SAP Continuous Integration and Delivery | `SAP_Continuous_Integration_and_Delivery` |
-| SAP Alert Notification service for SAP BTP | `SAP_Alert_Notification_service_for_SAP_BTP` |
-| SAP Automation Pilot | `SAP_Automation_Pilot` |
 
-Icon names for other services can be looked up in draw.io's shape library.
+### Looking Up an Icon Name Not in the Table
+
+Don't guess the name (a wrong `SAPIcon` renders as blank). Look it up in draw.io's SAP shape library source, which lists every icon name:
+
+```bash
+curl -sL https://raw.githubusercontent.com/jgraph/drawio/dev/src/main/webapp/js/diagramly/sidebar/Sidebar-SAP.js \
+  | grep -io "st + '[^']*<keyword>[^']*'"
+```
+
+- Replace `<keyword>` with a distinctive part of the service name (e.g. `alert`, `automation_pilot`). Matching is case-insensitive; try a shorter keyword or underscores in place of spaces if nothing matches
+- The string inside the quotes after `st + ` is the `SAPIcon` value (e.g. `st + 'SAP_Automation_Pilot'` → `SAPIcon=SAP_Automation_Pilot`)
+- If a keyword matches several names, pick the one for the service in question. If none fits, ask the user
+- Save the file under the scratchpad (not the project) if you want to grep it repeatedly
+- Don't add icons that can be looked up this way to the table above; the table is only for names that were hard to find or have an irregular spelling
 
 ---
 
