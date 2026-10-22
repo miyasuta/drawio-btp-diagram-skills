@@ -40,10 +40,12 @@ Reading draw.io XML directly is hard to review, so the key idea is to nail down 
 
 ### 1. Clone + Symlink
 
+Clone to any location you like — `<path-to-clone>` below is just a placeholder:
+
 ```bash
-git clone https://github.com/<user>/drawio-btp-diagram-skills.git ~/projects/claude-drawio-skill/drawio-btp-diagram-skills
-ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/drawio-sap-diagrams ~/.claude/skills/drawio-sap-diagrams
-ln -s ~/projects/claude-drawio-skill/drawio-btp-diagram-skills/skills/sap-diagram-review     ~/.claude/skills/sap-diagram-review
+git clone https://github.com/<your-fork>/drawio-btp-diagram-skills.git <path-to-clone>
+ln -s <path-to-clone>/skills/drawio-sap-diagrams ~/.claude/skills/drawio-sap-diagrams
+ln -s <path-to-clone>/skills/sap-diagram-review     ~/.claude/skills/sap-diagram-review
 ```
 
 Using symlinks means `git pull` results take effect immediately (`cp -r` is not recommended, since it's easy to forget to update the copy).
@@ -137,7 +139,7 @@ Because the skill is installed via a symlink, when Claude edits `references/` or
 
 Because the skill repo is symlinked, updates made during **a session in the consuming project** are not `git commit`ed by that session. Left unchecked, uncommitted changes will pile up.
 
-If you'd rather not commit these changes by hand, you can optionally set up a Stop hook in `~/.claude/settings.json` to automatically commit any uncommitted changes in the skill repo **when a session ends**:
+If you'd rather not commit these changes by hand, you can optionally set up a Stop hook in `~/.claude/settings.json` to automatically commit any uncommitted changes in the skill repo **when a session ends**. Replace `SKILL_REPO`'s value below with wherever you actually cloned this repo:
 
 ```json
 {
@@ -147,7 +149,7 @@ If you'd rather not commit these changes by hand, you can optionally set up a St
         "hooks": [
           {
             "type": "command",
-            "command": "SKILL_REPO=$HOME/projects/claude-drawio-skill/drawio-btp-diagram-skills; if [ -d \"$SKILL_REPO/.git\" ] && [ -n \"$(git -C \"$SKILL_REPO\" status --porcelain 2>/dev/null)\" ]; then git -C \"$SKILL_REPO\" add -A && FILES=$(git -C \"$SKILL_REPO\" diff --cached --name-only | paste -sd , - | sed 's/,/, /g') && STAT=$(git -C \"$SKILL_REPO\" diff --cached --shortstat | sed 's/^ *//') && git -C \"$SKILL_REPO\" commit -m \"Auto-update $FILES ($STAT)\"; fi || true"
+            "command": "SKILL_REPO=<path-to-clone>; if [ -d \"$SKILL_REPO/.git\" ] && [ -n \"$(git -C \"$SKILL_REPO\" status --porcelain 2>/dev/null)\" ]; then git -C \"$SKILL_REPO\" add -A && FILES=$(git -C \"$SKILL_REPO\" diff --cached --name-only | paste -sd , - | sed 's/,/, /g') && STAT=$(git -C \"$SKILL_REPO\" diff --cached --shortstat | sed 's/^ *//') && git -C \"$SKILL_REPO\" commit -m \"Auto-update $FILES ($STAT)\"; fi || true"
           }
         ]
       }
