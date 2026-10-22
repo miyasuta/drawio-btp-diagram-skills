@@ -38,7 +38,11 @@ Reading draw.io XML directly is hard to review, so the key idea is to nail down 
 - Claude Code installed
 - `git` / `ln` available (macOS / Linux)
 
-### 1. Clone + Symlink
+### 1. Fork This Repository
+
+This repo is meant to be used as your own copy, not pulled directly from the original — as covered in [How the Skill Grows](#how-the-skill-grows) below, Claude will keep editing and committing to it as you use it. Fork it on GitHub first, then clone your fork.
+
+### 2. Clone + Symlink
 
 Clone to any location you like — `<path-to-clone>` below is just a placeholder:
 
@@ -57,11 +61,11 @@ ls -la ~/.claude/skills/drawio-sap-diagrams/        # confirm the symlink resolv
 ls ~/.claude/skills/drawio-sap-diagrams/references/ # layout / elements / guidelines
 ```
 
-### 2. Restart Claude Code
+### 3. Restart Claude Code
 
 If `drawio-sap-diagrams` and `sap-diagram-review` both appear in the skill list at the start of a session, you're ready to go.
 
-### 3. Draw Your First Diagram
+### 4. Draw Your First Diagram
 
 Try it out in any project:
 
@@ -114,6 +118,8 @@ Once you send a prompt, the skill proceeds through the following steps:
 ## How the Skill Grows
 
 This skill is designed to **grow as you use it**. When you notice an element that isn't yet in the shipped `references/`, or a preference or house rule of your own, just mention it in conversation and Claude will persist it to the right file.
+
+This all happens inside **your own fork** — it never touches the original repository you forked from. Whether to upstream any of it via a pull request is entirely up to you.
 
 ### Examples of How It Grows
 
