@@ -125,7 +125,6 @@ This all happens inside **your own fork** — it never touches the original repo
 
 | Trigger | Where it gets persisted |
 |---|---|
-| You confirmed the name of an SAP service icon that wasn't registered yet | The SAPIcon table in `references/elements.md` |
 | A new style, color, or size (documented officially but not yet defined in the skill) | `references/elements.md` or `references/layout.md` |
 | A layout policy like "this pattern should generally be arranged like this" | The Conventions section of `SKILL.md` |
 | A design rule like "these services are always drawn together" | The Conventions section of `SKILL.md` |
